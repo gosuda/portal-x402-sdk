@@ -83,4 +83,12 @@ describe('BaseError', () => {
       expect(narrowed).toBe('SubError')
     }
   })
+
+  it('subclasses preserve the native Error prototype chain', () => {
+    const err = new _TestError('regression guard')
+    expect(err).toBeInstanceOf(Error)
+    expect(err).toBeInstanceOf(BaseError)
+    expect(err).toBeInstanceOf(_TestError)
+    expect(typeof err.stack).toBe('string')
+  })
 })
