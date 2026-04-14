@@ -3,6 +3,7 @@ name: changesets
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: changesets-${{ github.ref }}

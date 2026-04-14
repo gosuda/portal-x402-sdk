@@ -1,37 +1,30 @@
-# @gosuda/portal-x402-sdk
+# portal-x402-sdk
 
 > TypeScript SDK that wraps x402 payment + ERC-8004 identity + ENSIP-25 verification for portal-tunnel relay networks.
 
 **Status**: pre-release (0.1.0 in development)
 
-## Install
+## Packages
+
+| Package | Description |
+|---|---|
+| [`@gosuda/portal-x402-sdk`](./packages/sdk) | Hono middleware, paid fetch, relay selection, ERC-8004 identity, ENSIP-25 verification |
+
+## Development
 
 ```bash
-pnpm add @gosuda/portal-x402-sdk hono viem
+pnpm install
+pnpm -r build
+pnpm -r test
+pnpm lint
 ```
 
-## Quickstart — Hono paywall
+See [`packages/sdk/README.md`](./packages/sdk/README.md) for installation and usage.
 
-```ts
-import { x402 } from '@gosuda/portal-x402-sdk/hono'
-import { Hono } from 'hono'
+## Related projects
 
-const app = new Hono()
-
-app.get(
-  '/premium',
-  x402({
-    amount: 100_000n,
-    asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC on Base
-    recipient: '0xYourTreasury',
-    facilitator: 'https://facilitator.portal.gosuda.dev',
-    network: 'eip155:8453',
-  }),
-  (c) => c.json({ article: '...' }),
-)
-
-export default app
-```
+- [portal-tunnel](https://github.com/gosuda/portal-tunnel) — Trustless relay network (Go)
+- [x402-facilitator](https://github.com/gosuda/x402-facilitator) — x402 payment facilitator (Go)
 
 ## License
 
