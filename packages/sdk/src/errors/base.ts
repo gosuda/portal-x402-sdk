@@ -11,8 +11,8 @@ export type BaseErrorParameters = {
 /** Discriminator alias narrowing `err.name` to the literal `'BaseError'`. */
 export type BaseErrorType = BaseError & { name: 'BaseError' }
 
-/** Root of the `@gosuda/portal-x402-sdk` error hierarchy. */
-export class BaseError extends Error {
+/** Root of the `@gosuda/portal-x402-sdk` error hierarchy. Extend, do not instantiate. */
+export abstract class BaseError extends Error {
   override readonly name: string = 'BaseError'
   readonly shortMessage: string
   readonly details: string

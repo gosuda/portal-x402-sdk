@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { BaseError } from './base'
 
+class _TestError extends BaseError {}
+
 describe('BaseError', () => {
   it('stores shortMessage and name with no args', () => {
-    const err = new BaseError('something went wrong')
+    const err = new _TestError('something went wrong')
     expect(err.shortMessage).toBe('something went wrong')
     expect(err.name).toBe('BaseError')
     expect(err.message).toBe('something went wrong')
@@ -14,7 +16,7 @@ describe('BaseError', () => {
   })
 
   it('joins metaMessages into the composed message', () => {
-    const err = new BaseError('short', {
+    const err = new _TestError('short', {
       metaMessages: ['context 1', 'context 2'],
     })
     expect(err.message).toBe('short\n\ncontext 1\ncontext 2')
@@ -22,13 +24,13 @@ describe('BaseError', () => {
   })
 
   it('appends Details line when details provided', () => {
-    const err = new BaseError('short', { details: 'raw wire payload' })
+    const err = new _TestError('short', { details: 'raw wire payload' })
     expect(err.message).toBe('short\n\nDetails: raw wire payload')
     expect(err.details).toBe('raw wire payload')
   })
 
   it('composes Docs line from docsBaseUrl + docsPath + docsSlug', () => {
-    const err = new BaseError('short', {
+    const err = new _TestError('short', {
       docsBaseUrl: 'https://docs.example',
       docsPath: '/errors',
       docsSlug: 'base-error',
@@ -39,7 +41,7 @@ describe('BaseError', () => {
 
   it('chains Error.cause natively and derives details from cause.message', () => {
     const inner = new Error('inner failure')
-    const err = new BaseError('outer short', { cause: inner })
+    const err = new _TestError('outer short', { cause: inner })
     expect(err.cause).toBe(inner)
     expect(err.details).toBe('inner failure')
     expect(err.message).toContain('Details: inner failure')
@@ -47,18 +49,18 @@ describe('BaseError', () => {
 
   it('walk() without args returns the deepest Error in the chain', () => {
     const leaf = new Error('leaf')
-    const mid = new BaseError('mid', { cause: leaf })
-    const top = new BaseError('top', { cause: mid })
+    const mid = new _TestError('mid', { cause: leaf })
+    const top = new _TestError('top', { cause: mid })
     expect(top.walk()).toBe(leaf)
 
-    const standalone = new BaseError('solo')
+    const standalone = new _TestError('solo')
     expect(standalone.walk()).toBe(standalone)
   })
 
   it('walk() with predicate returns the first matching Error or null', () => {
     const leaf = new Error('leaf')
-    const mid = new BaseError('mid short', { cause: leaf })
-    const top = new BaseError('top', { cause: mid })
+    const mid = new _TestError('mid short', { cause: leaf })
+    const top = new _TestError('top', { cause: mid })
 
     const match = top.walk((e) => e instanceof BaseError && e.shortMessage === 'mid short')
     expect(match).toBe(mid)
