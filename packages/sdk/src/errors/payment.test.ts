@@ -62,6 +62,15 @@ describe('FacilitatorError', () => {
     expect(err.details).toBe('{"error":"gateway"}')
     expect(err.body).toEqual({ error: 'gateway' })
   })
+
+  it('does not rethrow when body throws on JSON.stringify (circular ref)', () => {
+    const circular: Record<string, unknown> = { a: 1 }
+    circular.self = circular
+    expect(() => new FacilitatorError({ status: 500, body: circular })).not.toThrow()
+    const err = new FacilitatorError({ status: 500, body: circular })
+    expect(err.details).toBe('[unserializable]')
+    expect(err.body).toBe(circular)
+  })
 })
 
 describe('VerificationError', () => {

@@ -49,10 +49,18 @@ export class FacilitatorError extends BaseError {
     super(`Facilitator returned ${args.status}`, {
       cause: args.cause,
       metaMessages: args.metaMessages,
-      details: typeof args.body === 'string' ? args.body : JSON.stringify(args.body),
+      details: typeof args.body === 'string' ? args.body : safeStringify(args.body),
     })
     this.status = args.status
     this.body = args.body
+  }
+}
+
+function safeStringify(value: unknown): string {
+  try {
+    return JSON.stringify(value) ?? '[undefined]'
+  } catch {
+    return '[unserializable]'
   }
 }
 
