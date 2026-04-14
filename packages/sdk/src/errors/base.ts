@@ -1,13 +1,4 @@
-/**
- * Optional parameters for {@link BaseError} and its subclasses.
- *
- * @example
- * new BaseError('Short message', {
- *   cause: upstreamError,
- *   details: 'raw payload',
- *   metaMessages: ['context line'],
- * })
- */
+/** Optional parameters for {@link BaseError} and its subclasses. */
 export type BaseErrorParameters = {
   cause?: BaseError | Error | undefined
   details?: string | undefined
@@ -17,32 +8,10 @@ export type BaseErrorParameters = {
   metaMessages?: string[] | undefined
 }
 
-/**
- * Discriminator alias narrowing `err.name` to the literal `'BaseError'`.
- * Used alongside per-subclass literals to build exhaustive switches.
- */
+/** Discriminator alias narrowing `err.name` to the literal `'BaseError'`. */
 export type BaseErrorType = BaseError & { name: 'BaseError' }
 
-/**
- * Root of the `@gosuda/portal-x402-sdk` error hierarchy.
- *
- * Every concrete error subclass extends this and sets `name` to a unique
- * literal. Consumers exhaustively handle failures by switching on `err.name`
- * against the `PortalErrorName` discriminator union exported from
- * `@gosuda/portal-x402-sdk/errors`.
- *
- * Immutable after construction. Native `Error.cause` chain. No global
- * mutable config, no `Symbol.for()` brand.
- *
- * @example
- * try {
- *   throw new BaseError('Something went wrong', { cause: upstream })
- * } catch (err) {
- *   if (err instanceof BaseError) {
- *     console.log(err.shortMessage, err.walk().message)
- *   }
- * }
- */
+/** Root of the `@gosuda/portal-x402-sdk` error hierarchy. */
 export class BaseError extends Error {
   override readonly name: string = 'BaseError'
   readonly shortMessage: string
@@ -76,13 +45,7 @@ export class BaseError extends Error {
     if (args.metaMessages !== undefined) this.metaMessages = args.metaMessages
   }
 
-  /**
-   * Traverse the native `Error.cause` chain.
-   *
-   * Without a predicate, returns the deepest `Error` in the chain (or `this`
-   * if there is none). With a predicate, returns the first value for which
-   * the predicate returns `true`, or `null` if no match is found.
-   */
+  /** Traverse the native `Error.cause` chain, optionally filtering by predicate. */
   walk(): Error
   walk(fn: (err: unknown) => boolean): Error | null
   walk(fn?: (err: unknown) => boolean): Error | null {

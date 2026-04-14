@@ -8,13 +8,7 @@ export type RelayDiscoveryErrorArgs = {
   metaMessages?: BaseErrorParameters['metaMessages']
 }
 
-/**
- * Thrown when the portal-tunnel `/discovery` endpoint is unreachable,
- * returns non-JSON, or fails schema validation.
- *
- * @example
- * throw new RelayDiscoveryError({ bootstrapUrl: 'https://relay.example/discovery' })
- */
+/** Thrown when a portal-tunnel `/discovery` endpoint read fails. */
 export class RelayDiscoveryError extends BaseError {
   override readonly name = 'RelayDiscoveryError' as const
   readonly bootstrapUrl: string
@@ -45,13 +39,7 @@ export type RelayVerificationErrorArgs = {
   metaMessages?: BaseErrorParameters['metaMessages']
 }
 
-/**
- * Thrown when `verifyPortalHost` fails any of the DNSSEC / ENS /
- * ERC-8004 / ENSIP-25 cross-checks for a relay's advertised host.
- *
- * @example
- * throw new RelayVerificationError({ host: 'relay.eth', reason: 'ensip25-mismatch' })
- */
+/** Thrown when `verifyPortalHost` fails a DNSSEC / ENS / ERC-8004 / ENSIP-25 cross-check. */
 export class RelayVerificationError extends BaseError {
   override readonly name = 'RelayVerificationError' as const
   readonly host: string

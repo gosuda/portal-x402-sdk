@@ -11,13 +11,7 @@ export type PaymentRequiredErrorArgs = {
   metaMessages?: BaseErrorParameters['metaMessages']
 }
 
-/**
- * Thrown when a request reaches a protected handler without a valid
- * `X-PAYMENT` header. Rendered as HTTP 402 by the Hono middleware.
- *
- * @example
- * throw new PaymentRequiredError({ requirements })
- */
+/** Thrown when a request reaches a protected handler without a valid `X-PAYMENT` header. */
 export class PaymentRequiredError extends BaseError {
   override readonly name = 'PaymentRequiredError' as const
   readonly requirements: PaymentRequirements
@@ -45,13 +39,7 @@ export type FacilitatorErrorArgs = {
   metaMessages?: BaseErrorParameters['metaMessages']
 }
 
-/**
- * Thrown when the x402 facilitator HTTP API returns a non-2xx response
- * or an unexpected payload. Rendered as HTTP 503 by the Hono middleware.
- *
- * @example
- * throw new FacilitatorError({ status: 503, body: 'upstream down' })
- */
+/** Thrown when the x402 facilitator HTTP API returns a non-2xx or unexpected payload. */
 export class FacilitatorError extends BaseError {
   override readonly name = 'FacilitatorError' as const
   readonly status: number
@@ -78,13 +66,7 @@ export type VerificationErrorArgs = {
   metaMessages?: BaseErrorParameters['metaMessages']
 }
 
-/**
- * Thrown when the facilitator rejects a `verify` or `settle` call with an
- * `invalidReason` code, or when a signed payload fails local validation.
- *
- * @example
- * throw new VerificationError({ reason: 'invalid_signature' })
- */
+/** Thrown when the facilitator rejects a payment or local validation fails. */
 export class VerificationError extends BaseError {
   override readonly name = 'VerificationError' as const
   readonly reason: string

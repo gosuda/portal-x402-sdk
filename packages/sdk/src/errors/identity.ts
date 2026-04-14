@@ -10,13 +10,7 @@ export type IdentityLookupErrorArgs = {
   metaMessages?: BaseErrorParameters['metaMessages']
 }
 
-/**
- * Thrown when an ERC-8004 Identity Registry read fails — unreachable RPC,
- * non-existent agent, or malformed registration file.
- *
- * @example
- * throw new IdentityLookupError({ agentId: 42n })
- */
+/** Thrown when an ERC-8004 Identity Registry read fails. */
 export class IdentityLookupError extends BaseError {
   override readonly name = 'IdentityLookupError' as const
   readonly agentId?: bigint
@@ -49,13 +43,7 @@ export type RegistrationErrorArgs = {
   metaMessages?: BaseErrorParameters['metaMessages']
 }
 
-/**
- * Thrown by the `relay-register` CLI when the registration pipeline fails
- * at the IPFS pin, the Identity Registry write, or the receipt wait stage.
- *
- * @example
- * throw new RegistrationError({ step: 'ipfs', cause: pinataError })
- */
+/** Thrown when the relay registration pipeline fails at one of its steps. */
 export class RegistrationError extends BaseError {
   override readonly name = 'RegistrationError' as const
   readonly step: RegistrationStep
