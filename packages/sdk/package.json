@@ -1,0 +1,176 @@
+{
+  "name": "@gosuda/portal-x402-sdk",
+  "version": "0.0.0",
+  "description": "TypeScript SDK that wraps x402 payment + ERC-8004 identity + ENSIP-25 verification for portal-tunnel relay networks.",
+  "license": "MIT",
+  "homepage": "https://github.com/gosuda/portal-x402-sdk",
+  "bugs": {
+    "url": "https://github.com/gosuda/portal-x402-sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gosuda/portal-x402-sdk.git",
+    "directory": "packages/sdk"
+  },
+  "keywords": [
+    "x402",
+    "erc8004",
+    "ensip25",
+    "portal-tunnel",
+    "ens",
+    "hono",
+    "payment",
+    "evm"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "relay-register": "./dist/cli/relay-register.mjs"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./hono": {
+      "import": {
+        "types": "./dist/hono/index.d.ts",
+        "default": "./dist/hono/index.mjs"
+      },
+      "require": {
+        "types": "./dist/hono/index.d.cts",
+        "default": "./dist/hono/index.cjs"
+      }
+    },
+    "./client": {
+      "import": {
+        "types": "./dist/client/index.d.ts",
+        "default": "./dist/client/index.mjs"
+      },
+      "require": {
+        "types": "./dist/client/index.d.cts",
+        "default": "./dist/client/index.cjs"
+      }
+    },
+    "./relay": {
+      "import": {
+        "types": "./dist/relay/index.d.ts",
+        "default": "./dist/relay/index.mjs"
+      },
+      "require": {
+        "types": "./dist/relay/index.d.cts",
+        "default": "./dist/relay/index.cjs"
+      }
+    },
+    "./facilitator": {
+      "import": {
+        "types": "./dist/facilitator/index.d.ts",
+        "default": "./dist/facilitator/index.mjs"
+      },
+      "require": {
+        "types": "./dist/facilitator/index.d.cts",
+        "default": "./dist/facilitator/index.cjs"
+      }
+    },
+    "./schemes": {
+      "import": {
+        "types": "./dist/schemes/index.d.ts",
+        "default": "./dist/schemes/index.mjs"
+      },
+      "require": {
+        "types": "./dist/schemes/index.d.cts",
+        "default": "./dist/schemes/index.cjs"
+      }
+    },
+    "./erc8004": {
+      "import": {
+        "types": "./dist/erc8004/index.d.ts",
+        "default": "./dist/erc8004/index.mjs"
+      },
+      "require": {
+        "types": "./dist/erc8004/index.d.cts",
+        "default": "./dist/erc8004/index.cjs"
+      }
+    },
+    "./ensip25": {
+      "import": {
+        "types": "./dist/ensip25/index.d.ts",
+        "default": "./dist/ensip25/index.mjs"
+      },
+      "require": {
+        "types": "./dist/ensip25/index.d.cts",
+        "default": "./dist/ensip25/index.cjs"
+      }
+    },
+    "./errors": {
+      "import": {
+        "types": "./dist/errors/index.d.ts",
+        "default": "./dist/errors/index.mjs"
+      },
+      "require": {
+        "types": "./dist/errors/index.d.cts",
+        "default": "./dist/errors/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc",
+    "clean": "rm -rf dist coverage docs/api"
+  },
+  "dependencies": {
+    "@wonderland/interop-addresses": "^0.5.1",
+    "@x402/core": "^2.10.0",
+    "@x402/evm": "^2.10.0",
+    "cac": "^7.0.0",
+    "viem": "^2.47.0",
+    "zod": "^3.24.2"
+  },
+  "peerDependencies": {
+    "hono": ">=4.0.0",
+    "typescript": ">=5.5.0"
+  },
+  "peerDependenciesMeta": {
+    "hono": {
+      "optional": true
+    },
+    "typescript": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
+    "@size-limit/preset-small-lib": "^12.1.0",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^4.0.0",
+    "hono": "^4.12.0",
+    "msw": "^2.13.0",
+    "prool": "^0.2.4",
+    "publint": "^0.3.18",
+    "size-limit": "^12.1.0",
+    "tsup": "^8.5.0",
+    "typedoc": "^0.28.19",
+    "typedoc-plugin-markdown": "^4.11.0",
+    "typescript": "^5.5.0",
+    "vitest": "^4.0.0"
+  }
+}
