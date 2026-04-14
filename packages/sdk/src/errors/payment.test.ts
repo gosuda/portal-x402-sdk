@@ -41,6 +41,24 @@ describe('PaymentRequiredError', () => {
       expect.fail('name discriminator did not narrow')
     }
   })
+
+  it('extracts amount from V2 PaymentRequirements shape', () => {
+    const v2Requirements: PaymentRequirements = {
+      scheme: 'exact',
+      network: 'eip155:8453',
+      amount: '200000',
+      asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      payTo: '0x0000000000000000000000000000000000000001',
+      maxTimeoutSeconds: 60,
+      extra: null,
+    }
+    const err = new PaymentRequiredError({ requirements: v2Requirements })
+    expect(err.name).toBe('PaymentRequiredError')
+    expect(err.requirements).toBe(v2Requirements)
+    expect(err.shortMessage).toContain('200000')
+    expect(err.shortMessage).toContain('exact')
+    expect(err.shortMessage).toContain(v2Requirements.asset)
+  })
 })
 
 describe('FacilitatorError', () => {
