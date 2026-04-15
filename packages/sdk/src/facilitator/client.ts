@@ -264,7 +264,8 @@ async function safeReadBody(response: Response): Promise<unknown> {
 }
 
 function isAbortError(err: unknown): boolean {
-  return err instanceof DOMException && err.name === 'AbortError'
+  if (!(err instanceof DOMException)) return false
+  return err.name === 'AbortError' || err.name === 'TimeoutError'
 }
 
 async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
