@@ -24,7 +24,11 @@ export type RetryPolicy = {
 export type PortalFacilitatorConfig = {
   /** Facilitator URL. Defaults to `https://x402.org/facilitator`. */
   url?: string
-  /** Per-call timeout in ms. Default 30000 to cover slow on-chain settle. */
+  /**
+   * Per-attempt timeout in ms (each retry gets a fresh budget, total wall
+   * clock can exceed this when retries are enabled). Default 30000 to cover
+   * slow on-chain settle.
+   */
   timeoutMs?: number
   /** Retry policy for verify and getSupported. */
   retry?: Partial<RetryPolicy>
@@ -36,8 +40,11 @@ export type PortalFacilitatorConfig = {
 
 /** Per-call options accepted by every PortalFacilitator method. */
 export type RequestOptions = {
+  /** Caller AbortSignal. Composed with the internal per-attempt timeout via `AbortSignal.any`. */
   signal?: AbortSignal
+  /** Per-attempt timeout override in ms (each retry gets a fresh budget). */
   timeoutMs?: number
+  /** Per-call retry override. Pass `{ count: N }` on settle to opt INTO retry. */
   retry?: Partial<RetryPolicy>
 }
 

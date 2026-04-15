@@ -182,7 +182,7 @@ describe('createPortalFacilitator — abort and timeout', () => {
     await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
   })
 
-  it('verify per-call timeoutMs fires internal timeout and recovers on retry', async () => {
+  it('verify timeoutMs override fires per-attempt timeout and recovers on retry', async () => {
     let attempt = 0
     server.use(
       http.post(`${FACILITATOR_URL}/verify`, async () => {
