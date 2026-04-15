@@ -163,6 +163,31 @@ describe('createPortalFacilitator — error paths', () => {
     expect(result).toEqual(verifyOk)
     expect(attempt).toBe(2)
   })
+
+  it('FacilitatorError preserves the network error as cause after retry exhaustion', async () => {
+    let attempt = 0
+    server.use(
+      http.post(`${FACILITATOR_URL}/verify`, () => {
+        attempt++
+        return HttpResponse.error()
+      }),
+    )
+    const fac = createPortalFacilitator({
+      url: FACILITATOR_URL,
+      retry: { count: 1, baseDelayMs: 1, capDelayMs: 2 },
+    })
+    try {
+      await fac.verify(payloadFixture, requirementsFixture)
+      expect.fail('expected FacilitatorError to be thrown')
+    } catch (err) {
+      expect(err).toBeInstanceOf(FacilitatorError)
+      if (err instanceof FacilitatorError) {
+        expect(err.status).toBe(0)
+        expect(err.cause).toBeInstanceOf(TypeError)
+      }
+    }
+    expect(attempt).toBe(2)
+  })
 })
 
 describe('createPortalFacilitator — abort and timeout', () => {
