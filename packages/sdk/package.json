@@ -41,6 +41,16 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./auth": {
+      "import": {
+        "types": "./dist/auth/index.d.ts",
+        "default": "./dist/auth/index.mjs"
+      },
+      "require": {
+        "types": "./dist/auth/index.d.cts",
+        "default": "./dist/auth/index.cjs"
+      }
+    },
     "./hono": {
       "import": {
         "types": "./dist/hono/index.d.ts",
@@ -141,6 +151,9 @@
     "@wonderland/interop-addresses": "^0.5.1",
     "@x402/core": "^2.10.0",
     "@x402/evm": "^2.10.0",
+    "@x402/extensions": "^2.10.0",
+    "@x402/fetch": "^2.10.0",
+    "@x402/hono": "^2.10.0",
     "cac": "^7.0.0",
     "viem": "^2.47.0",
     "zod": "^3.24.2"

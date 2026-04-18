@@ -2,17 +2,37 @@
   {
     "name": "main entry (createPortalClient)",
     "path": "dist/index.mjs",
-    "limit": "50 KB"
+    "limit": "50 KB",
+    "ignore": [
+      "@wonderland/interop-addresses",
+      "@x402/core",
+      "@x402/evm",
+      "@x402/extensions",
+      "@x402/fetch",
+      "@x402/hono",
+      "cac",
+      "hono",
+      "viem",
+      "zod"
+    ]
+  },
+  {
+    "name": "auth (SIWX + portal-tunnel lease flow)",
+    "path": "dist/auth/index.mjs",
+    "limit": "10 KB",
+    "ignore": ["@x402/core", "@x402/extensions", "viem", "zod"]
   },
   {
     "name": "hono middleware",
     "path": "dist/hono/index.mjs",
-    "limit": "20 KB"
+    "limit": "20 KB",
+    "ignore": ["@x402/core", "@x402/hono", "hono"]
   },
   {
     "name": "client (paidFetch)",
     "path": "dist/client/index.mjs",
-    "limit": "30 KB"
+    "limit": "30 KB",
+    "ignore": ["@x402/core", "@x402/evm", "@x402/fetch", "viem"]
   },
   {
     "name": "relay",
@@ -22,7 +42,8 @@
   {
     "name": "facilitator",
     "path": "dist/facilitator/index.mjs",
-    "limit": "15 KB"
+    "limit": "15 KB",
+    "ignore": ["@x402/core", "viem"]
   },
   {
     "name": "schemes",
