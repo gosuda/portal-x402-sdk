@@ -5,6 +5,12 @@ export type {
   SIWxPayload,
 } from '@x402/extensions/sign-in-with-x'
 export {
+  type CreateSiwxAuthHeadersConfig,
+  createSiwxAuthHeaders,
+  type SiwxAuthHeaderPaths,
+  type SiwxAuthHeaderScheme,
+} from './auth-headers'
+export {
   createPortalSiwx,
   type PortalSiwxAuth,
   type PortalSiwxConfig,
