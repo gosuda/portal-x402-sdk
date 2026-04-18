@@ -41,6 +41,16 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./auth": {
+      "import": {
+        "types": "./dist/auth/index.d.ts",
+        "default": "./dist/auth/index.mjs"
+      },
+      "require": {
+        "types": "./dist/auth/index.d.cts",
+        "default": "./dist/auth/index.cjs"
+      }
+    },
     "./hono": {
       "import": {
         "types": "./dist/hono/index.d.ts",
