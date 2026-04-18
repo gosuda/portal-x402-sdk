@@ -10,5 +10,4 @@ export {
   type CreatePortalHonoMiddlewareConfig,
   createPortalHonoMiddleware,
   mapFailureToPortalError,
-  type PortalTrustOptions,
 } from './middleware'

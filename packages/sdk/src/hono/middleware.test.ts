@@ -67,18 +67,6 @@ describe('createPortalHonoMiddleware', () => {
     expect(typeof middleware).toBe('function')
   })
 
-  it('accepts trust.verifyHost=true without throwing (placeholder in v0)', () => {
-    expect(() =>
-      createPortalHonoMiddleware({
-        routes: {},
-        facilitator: mockFacilitator,
-        schemes: [],
-        trust: { verifyHost: true },
-        syncFacilitatorOnStart: false,
-      }),
-    ).not.toThrow()
-  })
-
   it('integrates cleanly with a Hono app — unprotected routes still respond 200', async () => {
     const app = new Hono()
     app.use(

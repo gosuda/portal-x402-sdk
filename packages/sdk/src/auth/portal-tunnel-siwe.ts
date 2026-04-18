@@ -11,10 +11,6 @@ const PORTAL_TUNNEL_SIWE_VERSION = '1'
 const DEFAULT_CHALLENGE_PATH = '/sdk/register/challenge'
 const DEFAULT_REGISTER_PATH = '/sdk/register'
 
-// ────────────────────────────────────────────────────────────────────────────
-// Byte-equal SIWE message builder (offline)
-// ────────────────────────────────────────────────────────────────────────────
-
 /** Inputs to reconstruct the SIWE message that portal-tunnel's Go relay builds. */
 export type PortalTunnelChallengeInput = {
   /** SIWE domain (relay hostname, e.g. `'relay.example.com'`). */
@@ -63,10 +59,6 @@ function toRFC3339NoMs(date: Date): string {
   return date.toISOString().replace(/\.\d{3}Z$/, 'Z')
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Lease flow (online): fetchChallenge + register over HTTP
-// ────────────────────────────────────────────────────────────────────────────
-
 /** Optional lease metadata tag set. Mirrors Go `types.LeaseMetadata`. */
 export type PortalTunnelLeaseMetadata = {
   description?: string
@@ -78,14 +70,11 @@ export type PortalTunnelLeaseMetadata = {
 
 /** Input to `fetchChallenge`. Mirrors Go `types.RegisterChallengeRequest`. */
 export type PortalTunnelChallengeRequest = {
-  /** Consumer identity. Address is required; name optional. */
   identity: { name?: string; address: Address }
   metadata?: PortalTunnelLeaseMetadata
   /** Lease TTL in seconds. Relay enforces its own min/max. */
   ttl?: number
-  /** Request UDP/QUIC exposure. */
   udpEnabled?: boolean
-  /** Request TCP exposure. */
   tcpEnabled?: boolean
 }
 

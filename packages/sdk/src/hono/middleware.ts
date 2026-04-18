@@ -10,16 +10,6 @@ import { paymentMiddleware, type SchemeRegistration } from '@x402/hono'
 import type { MiddlewareHandler } from 'hono'
 import { FacilitatorError } from '../errors'
 
-/** Portal-specific trust gate. v0 is a placeholder — full implementation lands with `/relay/verifyPortalHost`. */
-export type PortalTrustOptions = {
-  /**
-   * Placeholder toggle. Set to `true` to reserve a BeforeVerify hook slot for
-   * portal host verification (DNSSEC + ENS + ERC-8004 + ENSIP-25 cross-check)
-   * that lands in the portal-identity fast-follow PR. No-op in this release.
-   */
-  verifyHost?: boolean
-}
-
 /** Configuration for {@link createPortalHonoMiddleware}. */
 export type CreatePortalHonoMiddlewareConfig = {
   /** Route configurations, passed verbatim to `@x402/hono paymentMiddleware`. */
@@ -35,8 +25,6 @@ export type CreatePortalHonoMiddlewareConfig = {
    * `@x402/svm ExactSvmScheme`, etc.) so the SDK does not assume chain set.
    */
   schemes: SchemeRegistration[]
-  /** Portal trust options. See {@link PortalTrustOptions}. */
-  trust?: PortalTrustOptions
   /** Paywall UI config, passed through to upstream. */
   paywallConfig?: PaywallConfig
   /** Custom paywall provider, passed through to upstream. */
@@ -78,8 +66,6 @@ export function mapFailureToPortalError(error: Error): FacilitatorError | null {
  * - Installs `OnVerifyFailureHook` / `OnSettleFailureHook` that remap upstream
  *   `FacilitatorResponseError` to our `FacilitatorError` so the consumer sees
  *   one error hierarchy across the whole SDK.
- * - Reserves a `BeforeVerifyHook` slot for the portal host verification gate
- *   that ships in the `/relay` fast-follow PR (opt-in via `trust.verifyHost`).
  *
  * Spec-level payment handshake, paywall HTML, settlement flow, and scheme
  * dispatch are owned entirely by upstream — we do not reimplement.
@@ -100,14 +86,6 @@ export function createPortalHonoMiddleware(
     const mapped = mapFailureToPortalError(ctx.error)
     if (mapped !== null) throw mapped
   })
-
-  if (config.trust?.verifyHost === true) {
-    server.onBeforeVerify(async () => {
-      // Intentional no-op placeholder in v0. In the portal-identity PR this
-      // becomes a `verifyPortalHost(...)` gate that returns
-      // `{ abort: true, reason: 'portal-host-verification-failed' }` on failure.
-    })
-  }
 
   return paymentMiddleware(
     config.routes,

@@ -46,8 +46,9 @@ export type CreatePortalPaidFetchConfig = {
  * - Same option surface as `@x402/fetch` (policies, selector, custom schemes)
  *   so migration stays trivial.
  *
- * The wire-level payment handshake — 402 parsing, `X-PAYMENT` encoding, loop
- * prevention — is owned entirely by upstream; we do not reimplement.
+ * The wire-level payment handshake — 402 parsing, `PAYMENT-SIGNATURE` (v2) /
+ * `X-PAYMENT` (v1) encoding, loop prevention — is owned entirely by upstream;
+ * we do not reimplement.
  *
  * @example
  * ```ts

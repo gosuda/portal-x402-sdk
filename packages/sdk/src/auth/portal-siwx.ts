@@ -38,7 +38,10 @@ export type PortalSiwxSignOptions = {
   address: Address
   /** EVM signer (viem `WalletClient`, `PrivateKeyAccount`, or any `{ signMessage }` implementation). */
   signer: EVMSigner
-  /** Optional deterministic nonce (useful for tests). Default `crypto.randomUUID()`. */
+  /**
+   * Optional deterministic nonce (useful for tests). Must be alphanumeric per
+   * SIWE/EIP-4361 ABNF. Default: `viem/siwe generateSiweNonce()`.
+   */
   nonce?: string
   /** Optional correlation id (CAIP-122 `requestId`). */
   requestId?: string
