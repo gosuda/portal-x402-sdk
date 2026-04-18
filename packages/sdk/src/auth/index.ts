@@ -12,3 +12,14 @@ export {
   type PortalSiwxSignOptions,
   type PortalSiwxVerifyOptions,
 } from './portal-siwx'
+export {
+  buildPortalTunnelChallengeMessage,
+  createPortalTunnelLeaseFlow,
+  type PortalTunnelChallenge,
+  type PortalTunnelChallengeInput,
+  type PortalTunnelChallengeRequest,
+  type PortalTunnelLease,
+  type PortalTunnelLeaseConfig,
+  type PortalTunnelLeaseFlow,
+  type PortalTunnelLeaseMetadata,
+} from './portal-tunnel-siwe'
