@@ -46,11 +46,6 @@
     "ignore": ["@x402/core", "viem"]
   },
   {
-    "name": "schemes",
-    "path": "dist/schemes/index.mjs",
-    "limit": "20 KB"
-  },
-  {
     "name": "erc8004",
     "path": "dist/erc8004/index.mjs",
     "limit": "40 KB"

@@ -8,7 +8,6 @@ export default defineConfig({
     'client/index': 'src/client/index.ts',
     'relay/index': 'src/relay/index.ts',
     'facilitator/index': 'src/facilitator/index.ts',
-    'schemes/index': 'src/schemes/index.ts',
     'erc8004/index': 'src/erc8004/index.ts',
     'ensip25/index': 'src/ensip25/index.ts',
     'errors/index': 'src/errors/index.ts',

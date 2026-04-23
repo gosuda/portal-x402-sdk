@@ -91,16 +91,6 @@
         "default": "./dist/facilitator/index.cjs"
       }
     },
-    "./schemes": {
-      "import": {
-        "types": "./dist/schemes/index.d.ts",
-        "default": "./dist/schemes/index.mjs"
-      },
-      "require": {
-        "types": "./dist/schemes/index.d.cts",
-        "default": "./dist/schemes/index.cjs"
-      }
-    },
     "./erc8004": {
       "import": {
         "types": "./dist/erc8004/index.d.ts",
