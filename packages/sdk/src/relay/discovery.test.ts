@@ -7,6 +7,7 @@ import {
   hasOverlayPeer,
   PORTAL_TUNNEL_DISCOVERY_VERSION,
   PORTAL_TUNNEL_SDK_VERSION,
+  rfc3339ToUnixNano,
 } from './discovery'
 
 const RELAY_URL = 'https://relay.test.example'
@@ -201,12 +202,64 @@ describe('fetchDiscovery — error paths', () => {
   })
 })
 
+describe('rfc3339ToUnixNano', () => {
+  it('returns second-precision unix nanos for a zero-fraction timestamp', () => {
+    expect(rfc3339ToUnixNano('2026-04-19T10:00:00Z')).toBe(1_776_592_800_000_000_000n)
+  })
+
+  it('preserves millisecond precision', () => {
+    expect(rfc3339ToUnixNano('2026-04-19T10:00:00.123Z')).toBe(1_776_592_800_123_000_000n)
+  })
+
+  it('preserves full nanosecond precision', () => {
+    expect(rfc3339ToUnixNano('2026-04-19T10:00:00.123456789Z')).toBe(1_776_592_800_123_456_789n)
+  })
+
+  it('handles timezone offsets', () => {
+    // 10:00 KST = 01:00 UTC; the nano value should reflect UTC.
+    expect(rfc3339ToUnixNano('2026-04-19T10:00:00+09:00')).toBe(
+      rfc3339ToUnixNano('2026-04-19T01:00:00Z'),
+    )
+  })
+
+  it('throws on malformed input', () => {
+    expect(() => rfc3339ToUnixNano('not a date')).toThrow(/invalid RFC3339/)
+  })
+})
+
+describe('fetchDiscovery — nano-precision timestamps', () => {
+  it('surfaces issuedAtNano and expiresAtNano from the raw RFC3339Nano strings', async () => {
+    server.use(
+      http.get(`${RELAY_URL}/discovery`, () =>
+        HttpResponse.json({
+          protocol_version: PORTAL_TUNNEL_DISCOVERY_VERSION,
+          generated_at: '2026-04-19T10:00:00Z',
+          relays: [
+            {
+              ...MINIMAL_RELAY,
+              issued_at: '2026-04-19T10:00:00.123456789Z',
+              expires_at: '2026-04-19T11:00:00.987654321Z',
+            },
+          ],
+        }),
+      ),
+    )
+    const result = await fetchDiscovery({ relayBaseUrl: RELAY_URL })
+    expect(result.relays[0]?.issuedAtNano).toBe(1_776_592_800_123_456_789n)
+    expect(result.relays[0]?.expiresAtNano).toBe(1_776_596_400_987_654_321n)
+  })
+})
+
 describe('hasOverlayPeer', () => {
+  const issued = new Date()
+  const expires = new Date(Date.now() + 60_000)
   const base = {
     address: '0xa',
     version: 'v2.1.7',
-    issuedAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
+    issuedAt: issued,
+    issuedAtNano: BigInt(issued.getTime()) * 1_000_000n,
+    expiresAt: expires,
+    expiresAtNano: BigInt(expires.getTime()) * 1_000_000n,
     apiHttpsAddr: 'https://x',
     supportsUdp: false,
     supportsTcp: false,

@@ -10,11 +10,15 @@ const AGENT_WALLET: Address = '0x000000000000000000000000000000000000bEEF'
 const DIFFERENT_ADDR: Address = '0x0000000000000000000000000000000000000DeaD'
 
 function makeDescriptor(overrides: Partial<RelayDescriptor> = {}): RelayDescriptor {
+  const issued = new Date('2026-04-19T10:00:00Z')
+  const expires = new Date('2026-04-19T11:00:00Z')
   return {
     address: AGENT_WALLET,
     version: 'v2.1.7',
-    issuedAt: new Date('2026-04-19T10:00:00Z'),
-    expiresAt: new Date('2026-04-19T11:00:00Z'),
+    issuedAt: issued,
+    issuedAtNano: BigInt(issued.getTime()) * 1_000_000n,
+    expiresAt: expires,
+    expiresAtNano: BigInt(expires.getTime()) * 1_000_000n,
     apiHttpsAddr: 'https://relay-a.example.com',
     wireGuardPublicKey: '',
     wireGuardPort: 0,

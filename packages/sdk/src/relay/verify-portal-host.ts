@@ -36,6 +36,7 @@ import type { Eip155ChainId } from '../ensip25/text-key'
 import type { IdentityRegistryClient } from '../erc8004/identity-registry'
 import { RelayVerificationError } from '../errors/relay'
 import type { RelayDescriptor } from './discovery'
+import { verifyRelayDescriptorSignature } from './verify-signature'
 
 /** Narrow read-side contract — only the ENS lookups we call on the resolver client. */
 export type EnsResolverClient = Pick<PublicClient, 'getEnsName' | 'getEnsText'>
@@ -56,6 +57,12 @@ export type VerifyPortalHostArgs = {
   ensClient: EnsResolverClient
   /** ERC-8004 Identity Registry client from `/erc8004`. */
   identityRegistry: IdentityRegistryClient
+  /**
+   * Run Layer 0 (descriptor signature verification) when `descriptor.signature`
+   * is non-empty. Defaults to `true`. Disable only for legacy relays that
+   * still emit unsigned descriptors on a pinned port.
+   */
+  verifyDescriptorSignature?: boolean
 }
 
 /** Result of a passing verification. All fields are cross-checked to agree. */
@@ -92,6 +99,15 @@ export async function verifyPortalHost(
   args: VerifyPortalHostArgs,
 ): Promise<VerifyPortalHostResult> {
   const advertisedAddress = args.descriptor.address as Address
+  const verifySignature = args.verifyDescriptorSignature ?? true
+
+  // Layer 0 — signed descriptor: only when the descriptor carries a
+  // signature and verification is enabled. We don't require a signature
+  // (bootstrap discovery may be unsigned); we just refuse to trust a
+  // bad one.
+  if (verifySignature && args.descriptor.signature.trim() !== '') {
+    await verifyRelayDescriptorSignature({ descriptor: args.descriptor, host: args.host })
+  }
 
   // Layer 2 — ENS reverse: the relay's advertised address resolves to an ENS name.
   const ensName = await reverseResolveEns(args, advertisedAddress)

@@ -36,13 +36,22 @@ const DEFAULT_DISCOVERY_PATH = '/discovery'
 /**
  * Parsed `types.RelayDescriptor`. The `address` field is the secp256k1
  * public-key-derived EIP-55 address that signs the descriptor; see
- * {@link verifyRelayDescriptorSignature} for Layer 0 verification.
+ * `verifyRelayDescriptorSignature` for Layer 0 verification.
+ *
+ * `issuedAtNano` and `expiresAtNano` preserve the nanosecond precision
+ * the Go side uses when computing `CanonicalBytes` (the signing payload).
+ * JS `Date` truncates to millisecond precision, so we keep the raw
+ * `UnixNano()` as a BigInt alongside the Date for consumer convenience.
  */
 export type RelayDescriptor = {
   address: string
   version: string
   issuedAt: Date
+  /** Unix nanoseconds at which the descriptor was signed. Load-bearing for signature verification. */
+  issuedAtNano: bigint
   expiresAt: Date
+  /** Unix nanoseconds at which the descriptor expires. Load-bearing for signature verification. */
+  expiresAtNano: bigint
   apiHttpsAddr: string
   wireGuardPublicKey: string
   wireGuardPort: number
@@ -60,6 +69,27 @@ export type RelayDescriptor = {
    * empty.
    */
   signature: string
+}
+
+/**
+ * Convert an RFC3339 / RFC3339Nano timestamp string to Unix nanoseconds.
+ * Go's `time.Time.MarshalJSON` emits up to 9 fractional-second digits;
+ * JS `Date` truncates at millisecond precision, so we parse the nano
+ * portion manually to keep the signing payload byte-exact.
+ */
+export function rfc3339ToUnixNano(rfc3339: string): bigint {
+  const match = rfc3339.match(
+    /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})?$/,
+  )
+  if (match === null) {
+    throw new Error(`invalid RFC3339 timestamp: ${rfc3339}`)
+  }
+  const base = match[1] ?? ''
+  const frac = match[2]
+  const tz = match[3] ?? 'Z'
+  const integerSeconds = BigInt(Math.floor(new Date(`${base}${tz}`).getTime() / 1000))
+  const nanos = frac === undefined ? 0n : BigInt(frac.slice(1).padEnd(9, '0').slice(0, 9))
+  return integerSeconds * 1_000_000_000n + nanos
 }
 
 /** Parsed `types.DiscoveryResponse`. */
@@ -89,7 +119,9 @@ const RelayDescriptorSchema = z
     address: raw.address,
     version: raw.version,
     issuedAt: new Date(raw.issued_at),
+    issuedAtNano: rfc3339ToUnixNano(raw.issued_at),
     expiresAt: new Date(raw.expires_at),
+    expiresAtNano: rfc3339ToUnixNano(raw.expires_at),
     apiHttpsAddr: raw.api_https_addr,
     wireGuardPublicKey: raw.wireguard_public_key,
     wireGuardPort: raw.wireguard_port,
