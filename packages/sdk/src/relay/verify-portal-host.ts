@@ -3,7 +3,7 @@
  * descriptor binds its hostname to an on-chain agent identity Portal
  * expects to be there.
  *
- * Four layers in the portal trust model:
+ * Five layers in the portal trust model:
  *
  *   Layer 1 — TLS.      Runtime concern. When the fetch that populated
  *                       the descriptor succeeded over HTTPS, the relay's
@@ -11,31 +11,34 @@
  *                       Node / the browser. portal-tunnel's ENSIP-17
  *                       DNSSEC pipeline guarantees the hostname ↔ TLS
  *                       binding is real. We do not wrap Node's TLS stack.
+ *   Layer 0 — Signed    The v2.1.7 descriptor carries a secp256k1
+ *     descriptor.       recoverable signature whose recovered address
+ *                       must equal `descriptor.address`. Delegated to
+ *                       `verifyRelayDescriptorSignature`.
  *   Layer 2 — ENS.      The relay's advertised `address` reverse-resolves
  *                       to an ENS name on the ENS-bearing chain (mainnet).
  *                       viem's `getEnsName` is the lookup.
  *   Layer 3 — ERC-8004. The claimed agent id exists in the Identity
  *                       Registry and its authoritative `agentWallet`
  *                       matches the descriptor's `address`.
- *   Layer 4 — ENSIP-25. The ENS name announces the agent id via the
- *                       ENSIP-25 text record `agent-registration[...][id]`
- *                       = `'1'`. Delegated to `crossCheckEnsip25`.
+ *   Layer 4 — Trust     One or more {@link TrustAnchor} cross-checks.
+ *     anchors.          Defaults to ENSIP-25 (`agent-registration[...][id]
+ *                       = '1'`), but swaps cheaply for ENSIP-26 /
+ *                       `agent.arp` / a custom adapter — the ENS DAO is
+ *                       actively debating successors, so we don't
+ *                       hard-code a single standard.
  *
  * Layer 1 is implicit (the caller must have fetched over HTTPS). Layers
- * 2-4 are explicit and composable — a failure at any layer throws
+ * 0, 2-4 are explicit and composable — a failure at any layer throws
  * `RelayVerificationError` with a typed `reason` discriminant.
- *
- * A future commit adds **Layer 0** — descriptor signature verification
- * via `verifyRelayDescriptorSignature`. Once live, Layer 0 runs first so
- * downstream layers trust the `address` field.
  */
 
 import type { Address, PublicClient } from 'viem'
-import { crossCheckEnsip25 } from '../ensip25/bidirectional'
 import type { Eip155ChainId } from '../ensip25/text-key'
 import type { IdentityRegistryClient } from '../erc8004/identity-registry'
 import { RelayVerificationError } from '../errors/relay'
 import type { RelayDescriptor } from './discovery'
+import { ensip25TrustAnchor, type TrustAnchor } from './trust-anchor'
 import { verifyRelayDescriptorSignature } from './verify-signature'
 
 /** Narrow read-side contract — only the ENS lookups we call on the resolver client. */
@@ -63,6 +66,14 @@ export type VerifyPortalHostArgs = {
    * still emit unsigned descriptors on a pinned port.
    */
   verifyDescriptorSignature?: boolean
+  /**
+   * Layer 4 trust anchors. Defaults to `[ensip25TrustAnchor({ chainId,
+   * registryAddress })]` — the current SDK default stays ENSIP-25. Pass
+   * an explicit list to swap in ENSIP-26, `agent.arp`, or a custom
+   * adapter; all supplied anchors must pass (AND semantics). Pass an
+   * empty array to skip Layer 4 entirely (rare — advanced callers only).
+   */
+  trustAnchors?: readonly TrustAnchor[]
 }
 
 /** Result of a passing verification. All fields are cross-checked to agree. */
@@ -71,10 +82,12 @@ export type VerifyPortalHostResult = {
   ensName: string
   agentId: bigint
   agentAddress: Address
+  /** Names of the trust anchors that passed Layer 4, in execution order. */
+  trustAnchors: readonly string[]
 }
 
 /**
- * Run all three explicit trust layers against a signed relay descriptor.
+ * Run every explicit trust layer against a signed relay descriptor.
  * Throws `RelayVerificationError` on any mismatch; returns the verified
  * record on success. Layer 1 (TLS) is the caller's responsibility — the
  * fetches that populated the discovery descriptor must have been HTTPS.
@@ -100,6 +113,9 @@ export async function verifyPortalHost(
 ): Promise<VerifyPortalHostResult> {
   const advertisedAddress = args.descriptor.address as Address
   const verifySignature = args.verifyDescriptorSignature ?? true
+  const trustAnchors = args.trustAnchors ?? [
+    ensip25TrustAnchor({ chainId: args.chainId, registryAddress: args.registryAddress }),
+  ]
 
   // Layer 0 — signed descriptor: only when the descriptor carries a
   // signature and verification is enabled. We don't require a signature
@@ -125,21 +141,26 @@ export async function verifyPortalHost(
     })
   }
 
-  // Layer 4 — ENSIP-25 bidirectional cross-check.
-  await crossCheckEnsip25({
-    ensName,
-    expectedAgentId: args.expectedAgentId,
-    chainId: args.chainId,
-    registryAddress: args.registryAddress,
-    publicClient: args.ensClient,
-    identityRegistry: args.identityRegistry,
-  })
+  // Layer 4 — pluggable trust anchors, all must pass.
+  const passedAnchorNames: string[] = []
+  for (const anchor of trustAnchors) {
+    await anchor.verify({
+      host: args.host,
+      ensName,
+      expectedAgentId: args.expectedAgentId,
+      advertisedAddress,
+      ensClient: args.ensClient,
+      identityRegistry: args.identityRegistry,
+    })
+    passedAnchorNames.push(anchor.name)
+  }
 
   return {
     host: args.host,
     ensName,
     agentId: args.expectedAgentId,
     agentAddress: agent.agentWallet,
+    trustAnchors: passedAnchorNames,
   }
 }
 

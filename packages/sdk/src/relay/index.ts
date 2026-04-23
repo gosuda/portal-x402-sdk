@@ -14,6 +14,13 @@ export {
 } from './discovery'
 export { type SelectBestRelayArgs, selectBestRelay } from './select-best-relay'
 export {
+  type Ensip25TrustAnchorConfig,
+  ensip25TrustAnchor,
+  type TrustAnchor,
+  type TrustAnchorContext,
+  type TrustAnchorEnsClient,
+} from './trust-anchor'
+export {
   type EnsResolverClient,
   type VerifyPortalHostArgs,
   type VerifyPortalHostResult,

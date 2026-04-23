@@ -89,6 +89,7 @@ describe('verifyPortalHost — happy path', () => {
       ensName: 'alice.eth',
       agentId: 42n,
       agentAddress: AGENT_WALLET,
+      trustAnchors: ['ensip25'],
     })
   })
 })
@@ -201,7 +202,7 @@ describe('verifyPortalHost — Layer 3 (ERC-8004)', () => {
   })
 })
 
-describe('verifyPortalHost — Layer 4 (ENSIP-25)', () => {
+describe('verifyPortalHost — Layer 4 (default ENSIP-25 anchor)', () => {
   it('throws ensip25-mismatch when the text record is missing', async () => {
     const ens = makeEnsClient({
       getEnsText: vi.fn().mockResolvedValue(null),
@@ -225,5 +226,77 @@ describe('verifyPortalHost — Layer 4 (ENSIP-25)', () => {
         expect(err.reason).toBe('ensip25-mismatch')
       }
     }
+  })
+})
+
+describe('verifyPortalHost — Layer 4 (pluggable trust anchors)', () => {
+  function freshRegistry() {
+    return makeIdentityRegistry({
+      agentId: 42n,
+      agentURI: 'ipfs://x',
+      agentWallet: AGENT_WALLET,
+      owner: AGENT_WALLET,
+    })
+  }
+
+  it('runs each supplied anchor in order and reports their names in the result', async () => {
+    const ordered: string[] = []
+    const first = { name: 'first', verify: vi.fn(async () => void ordered.push('first')) }
+    const second = { name: 'second', verify: vi.fn(async () => void ordered.push('second')) }
+
+    const result = await verifyPortalHost({
+      ...BASE_ARGS,
+      ensClient: makeEnsClient(),
+      identityRegistry: freshRegistry(),
+      trustAnchors: [first, second],
+    })
+
+    expect(result.trustAnchors).toEqual(['first', 'second'])
+    expect(ordered).toEqual(['first', 'second'])
+    expect(first.verify).toHaveBeenCalledTimes(1)
+    expect(second.verify).toHaveBeenCalledTimes(1)
+  })
+
+  it('fails fast when any anchor rejects', async () => {
+    const ok = { name: 'ok', verify: vi.fn(async () => undefined) }
+    const boom = {
+      name: 'boom',
+      verify: vi.fn(async () => {
+        throw new RelayVerificationError({
+          host: BASE_ARGS.host,
+          reason: 'ensip25-mismatch',
+          metaMessages: ['custom'],
+        })
+      }),
+    }
+    const never = { name: 'never', verify: vi.fn(async () => undefined) }
+
+    await expect(
+      verifyPortalHost({
+        ...BASE_ARGS,
+        ensClient: makeEnsClient(),
+        identityRegistry: freshRegistry(),
+        trustAnchors: [ok, boom, never],
+      }),
+    ).rejects.toMatchObject({ reason: 'ensip25-mismatch' })
+    expect(ok.verify).toHaveBeenCalledTimes(1)
+    expect(boom.verify).toHaveBeenCalledTimes(1)
+    expect(never.verify).not.toHaveBeenCalled()
+  })
+
+  it('skips Layer 4 entirely when an empty anchor list is supplied', async () => {
+    // Anchor-free mode is intentionally supported — an advanced caller who
+    // already proved the ENS↔agent link elsewhere can skip the cross-check.
+    const ens = makeEnsClient({
+      getEnsText: vi.fn().mockResolvedValue(null),
+    })
+    const result = await verifyPortalHost({
+      ...BASE_ARGS,
+      ensClient: ens,
+      identityRegistry: freshRegistry(),
+      trustAnchors: [],
+    })
+    expect(result.trustAnchors).toEqual([])
+    expect(ens.getEnsText).not.toHaveBeenCalled()
   })
 })
