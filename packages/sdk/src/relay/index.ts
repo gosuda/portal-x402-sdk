@@ -6,3 +6,4 @@ export {
   type RelayDescriptor,
   type RelayIdentity,
 } from './discovery'
+export { type SelectBestRelayArgs, selectBestRelay } from './select-best-relay'
