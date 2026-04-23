@@ -28,9 +28,9 @@ Two external systems, one integration point:
 | `/client` | **LANDED** | `paidFetch` with portal scheme defaults | Wraps `@x402/fetch` |
 | `/erc8004` | **LANDED** | ERC-8004 Identity + Reputation Registry clients + registration file + IPFS pinner hook (portal-specific) | viem + `@wonderland/interop-addresses` + zod |
 | `/ensip25` | **LANDED** | ENSIP-25 text key derivation + ERC-7930 encoding + bidirectional cross-check (portal-specific) | `@wonderland/interop-addresses` |
-| `/relay` | planned | `verifyPortalHost` (DNSSEC + ENS + ERC-8004 + ENSIP-25 cross-check), `/discovery` parser, `selectBestRelay` by reputation | — |
-| `/cli` (bin) | planned | `relay-register` — one-shot ERC-8004 registration for relay operators | — |
-| top-level | planned | `createPortalClient()` — single factory that combines everything | — |
+| `/relay` | **LANDED** | `fetchDiscovery` (`GET /discovery` parser, DiscoveryVersion=6 pinned), `selectBestRelay` (filter + score by Load/LoadScore), `verifyPortalHost` (ENS + ERC-8004 + ENSIP-25 layered trust) | viem ENS + `/erc8004` + `/ensip25` |
+| `/cli` (bin) | **LANDED** | `relay-register` — one-shot ERC-8004 agent registration with env-only private key | viem + cac |
+| top-level | **LANDED** | `createPortalClient()` — unified factory. `{ facilitator, paidFetch, createHonoMiddleware }` by default; `{ identityRegistry, reputationRegistry, fetchDiscovery, selectBestRelay, verifyPortalHost }` under `identity` when `identity: { chainId, publicClient }` is supplied | composes every subpath |
 
 Every subpath is `sideEffects: false`, dual ESM + CJS, with `.d.ts` + `.d.cts`. A consumer who imports only `/hono` never pays the bundle cost of `/cli` or `/erc8004`.
 
