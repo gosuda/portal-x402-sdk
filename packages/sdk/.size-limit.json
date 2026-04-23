@@ -62,5 +62,11 @@
     "name": "errors",
     "path": "dist/errors/index.mjs",
     "limit": "5 KB"
+  },
+  {
+    "name": "cli/relay-register",
+    "path": "dist/cli/relay-register.mjs",
+    "limit": "80 KB",
+    "ignore": ["@wonderland/interop-addresses", "cac", "viem", "zod"]
   }
 ]
