@@ -18,6 +18,18 @@ export {
   type WriteOptions,
 } from './identity-registry'
 export {
+  type IpfsPinner,
+  type PinRegistrationFileOptions,
+  pinRegistrationFile,
+} from './ipfs'
+export {
+  buildRegistrationFile,
+  parseRegistrationFile,
+  type RegistrationFile,
+  type RegistrationFileInput,
+  RegistrationFileSchema,
+} from './registration-file'
+export {
   type CreateReputationRegistryClientConfig,
   createReputationRegistryClient,
   type FeedbackEntry,
