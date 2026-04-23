@@ -1,2 +1,8 @@
-// Portal-tunnel relay discovery, selection and host verification. Implementation tracked in plan W2-W3.
-export {}
+export {
+  type DiscoveryResponse,
+  type FetchDiscoveryArgs,
+  fetchDiscovery,
+  PORTAL_TUNNEL_DISCOVERY_VERSION,
+  type RelayDescriptor,
+  type RelayIdentity,
+} from './discovery'

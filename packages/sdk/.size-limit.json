@@ -37,7 +37,8 @@
   {
     "name": "relay",
     "path": "dist/relay/index.mjs",
-    "limit": "30 KB"
+    "limit": "30 KB",
+    "ignore": ["@wonderland/interop-addresses", "viem", "zod"]
   },
   {
     "name": "facilitator",
