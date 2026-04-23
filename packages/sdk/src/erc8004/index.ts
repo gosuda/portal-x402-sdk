@@ -1,2 +1,41 @@
-// ERC-8004 Identity and Reputation Registry clients, registration file builder, IPFS. Implementation tracked in plan W3.
-export {}
+export { identityRegistryAbi, reputationRegistryAbi } from './abi'
+export {
+  ERC8004_ADDRESSES,
+  ERC8004_CHAIN_NAMES,
+  ERC8004_SPEC_VERSION,
+  type Erc8004AddressBundle,
+  type Erc8004ChainId,
+} from './addresses'
+export {
+  type AgentMetadata,
+  type AgentRecord,
+  type CreateIdentityRegistryClientConfig,
+  createIdentityRegistryClient,
+  type IdentityReadClient,
+  type IdentityRegistryClient,
+  type IdentityWriteClient,
+  type ReadOptions,
+  type WriteOptions,
+} from './identity-registry'
+export {
+  type IpfsPinner,
+  type PinRegistrationFileOptions,
+  pinRegistrationFile,
+} from './ipfs'
+export {
+  buildRegistrationFile,
+  parseRegistrationFile,
+  type RegistrationFile,
+  type RegistrationFileInput,
+  RegistrationFileSchema,
+} from './registration-file'
+export {
+  type CreateReputationRegistryClientConfig,
+  createReputationRegistryClient,
+  type FeedbackEntry,
+  type FeedbackSummary,
+  type GiveFeedbackArgs,
+  type ReputationReadClient,
+  type ReputationRegistryClient,
+  type ReputationWriteClient,
+} from './reputation-registry'

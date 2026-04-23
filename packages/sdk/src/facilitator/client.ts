@@ -7,18 +7,20 @@ import type {
   VerifyResponse,
 } from '@x402/core/types'
 import { FacilitatorError } from '../errors/payment'
+import {
+  DEFAULT_RETRY,
+  HttpRequestError,
+  mergeRetry,
+  NO_RETRY,
+  type RetryPolicy,
+  runRequest,
+} from '../internal/http'
 
 const DEFAULT_FACILITATOR_URL = 'https://x402.org/facilitator'
 const DEFAULT_TIMEOUT_MS = 30_000
 const X402_VERSION = 2
 
-/** Retry policy applied to verify and getSupported. settle is single-shot by default. */
-export type RetryPolicy = {
-  count: number
-  baseDelayMs: number
-  capDelayMs: number
-  retryableStatuses: ReadonlySet<number>
-}
+export type { RetryPolicy }
 
 /** Configuration for {@link createPortalFacilitator}. */
 export type PortalFacilitatorConfig = {
@@ -64,20 +66,6 @@ export interface PortalFacilitator extends FacilitatorClient {
   getSupported(opts?: RequestOptions): Promise<SupportedResponse>
 }
 
-const DEFAULT_RETRY: RetryPolicy = {
-  count: 2,
-  baseDelayMs: 200,
-  capDelayMs: 5_000,
-  retryableStatuses: new Set([429, 502, 503, 504]),
-}
-
-const NO_RETRY: RetryPolicy = {
-  count: 0,
-  baseDelayMs: 200,
-  capDelayMs: 5_000,
-  retryableStatuses: new Set(),
-}
-
 /** Create a Portal facilitator HTTP client with retry, timeout, and AbortSignal support. */
 export function createPortalFacilitator(config: PortalFacilitatorConfig = {}): PortalFacilitator {
   const url = (config.url ?? DEFAULT_FACILITATOR_URL).replace(/\/+$/, '')
@@ -103,17 +91,31 @@ export function createPortalFacilitator(config: PortalFacilitatorConfig = {}): P
     opts: RequestOptions | undefined,
   ): Promise<T> {
     const headers = await buildHeaders(path)
-    const response = await runRequest({
-      url: `${url}/${path}`,
-      method,
-      headers,
-      body,
-      retry: callRetry,
-      timeoutMs: opts?.timeoutMs ?? timeoutMs,
-      fetchFn,
-      userSignal: opts?.signal,
-    })
-    return (await response.json()) as T
+    try {
+      const response = await runRequest({
+        url: `${url}/${path}`,
+        method,
+        headers,
+        ...(body !== undefined && { body }),
+        retry: callRetry,
+        timeoutMs: opts?.timeoutMs ?? timeoutMs,
+        fetchFn,
+        ...(opts?.signal !== undefined && { userSignal: opts.signal }),
+      })
+      return (await response.json()) as T
+    } catch (err) {
+      if (err instanceof HttpRequestError) {
+        // Preserve the original cause chain — HttpRequestError is an internal
+        // transport wrapper, not part of FacilitatorError's public surface.
+        const cause = err.cause instanceof Error ? err.cause : undefined
+        throw new FacilitatorError({
+          status: err.status,
+          body: err.body,
+          ...(cause !== undefined && { cause }),
+        })
+      }
+      throw err
+    }
   }
 
   return {
@@ -157,135 +159,4 @@ export function createPortalFacilitator(config: PortalFacilitatorConfig = {}): P
       )
     },
   }
-}
-
-function mergeRetry(base: RetryPolicy, override: Partial<RetryPolicy> | undefined): RetryPolicy {
-  if (override === undefined) return base
-  return {
-    count: override.count ?? base.count,
-    baseDelayMs: override.baseDelayMs ?? base.baseDelayMs,
-    capDelayMs: override.capDelayMs ?? base.capDelayMs,
-    retryableStatuses: override.retryableStatuses ?? base.retryableStatuses,
-  }
-}
-
-type RunRequestArgs = {
-  url: string
-  method: 'GET' | 'POST'
-  headers: Record<string, string>
-  body: string | undefined
-  retry: RetryPolicy
-  timeoutMs: number
-  fetchFn: typeof globalThis.fetch
-  userSignal: AbortSignal | undefined
-}
-
-async function runRequest(args: RunRequestArgs): Promise<Response> {
-  let lastError: unknown
-
-  for (let attempt = 0; attempt <= args.retry.count; attempt++) {
-    const internalSignal = AbortSignal.timeout(args.timeoutMs)
-    const signal =
-      args.userSignal !== undefined
-        ? AbortSignal.any([args.userSignal, internalSignal])
-        : internalSignal
-
-    try {
-      const init: RequestInit = {
-        method: args.method,
-        headers: args.headers,
-        signal,
-        redirect: 'follow',
-      }
-      if (args.body !== undefined) init.body = args.body
-      const response = await args.fetchFn(args.url, init)
-
-      if (response.ok) return response
-
-      if (args.retry.retryableStatuses.has(response.status) && attempt < args.retry.count) {
-        const retryAfterMs = parseRetryAfter(response.headers.get('Retry-After'))
-        await sleep(retryAfterMs ?? backoffDelay(attempt, args.retry), args.userSignal)
-        continue
-      }
-
-      throw new FacilitatorError({
-        status: response.status,
-        body: await safeReadBody(response),
-      })
-    } catch (err) {
-      if (args.userSignal?.aborted === true) throw err
-      if (err instanceof FacilitatorError) throw err
-
-      if (isAbortError(err) && attempt < args.retry.count) {
-        lastError = err
-        await sleep(backoffDelay(attempt, args.retry), args.userSignal)
-        continue
-      }
-
-      if (err instanceof TypeError && attempt < args.retry.count) {
-        lastError = err
-        await sleep(backoffDelay(attempt, args.retry), args.userSignal)
-        continue
-      }
-
-      throw new FacilitatorError({
-        status: 0,
-        body: err instanceof Error ? err.message : String(err),
-        cause: err instanceof Error ? err : undefined,
-      })
-    }
-  }
-
-  throw new FacilitatorError({
-    status: 0,
-    body: 'retries exhausted',
-    cause: lastError instanceof Error ? lastError : undefined,
-  })
-}
-
-function backoffDelay(attempt: number, retry: RetryPolicy): number {
-  const exponential = Math.min(retry.capDelayMs, retry.baseDelayMs * 3 ** attempt)
-  return Math.floor(retry.baseDelayMs + Math.random() * (exponential - retry.baseDelayMs))
-}
-
-function parseRetryAfter(value: string | null): number | null {
-  if (value === null) return null
-  const seconds = Number(value)
-  if (Number.isFinite(seconds)) return seconds * 1000
-  const dateMs = Date.parse(value)
-  if (Number.isFinite(dateMs)) return Math.max(0, dateMs - Date.now())
-  return null
-}
-
-async function safeReadBody(response: Response): Promise<unknown> {
-  try {
-    const text = await response.text()
-    try {
-      return JSON.parse(text)
-    } catch {
-      return text
-    }
-  } catch {
-    return null
-  }
-}
-
-function isAbortError(err: unknown): boolean {
-  if (!(err instanceof DOMException)) return false
-  return err.name === 'AbortError' || err.name === 'TimeoutError'
-}
-
-async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  if (signal?.aborted === true) throw new DOMException('Aborted', 'AbortError')
-  return new Promise((resolve, reject) => {
-    const onAbort = () => {
-      clearTimeout(timer)
-      reject(new DOMException('Aborted', 'AbortError'))
-    }
-    const timer = setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort)
-      resolve()
-    }, ms)
-    signal?.addEventListener('abort', onAbort, { once: true })
-  })
 }

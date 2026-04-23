@@ -23,11 +23,11 @@ Two external systems, one integration point:
 |---|---|---|---|
 | `/errors` | **LANDED** | viem-style `BaseError` hierarchy with literal `name` discriminator + `walk()` cause chain | — |
 | `/facilitator` | **LANDED** | HTTP client over the x402 facilitator contract. AbortSignal + per-attempt timeout + decorrelated-jitter retry + `settle` no-retry safety. | Types from `@x402/core/http` |
-| `/auth` | **this PR** | Portal SIWX (CAIP-122) + portal-tunnel SIWE wire-compat + `createSiwxAuthHeaders()` factory | Wraps `@x402/extensions/sign-in-with-x` (EOA + EIP-1271 + EIP-6492) |
-| `/hono` | **this PR** | Hono middleware with pre-wired portal facilitator + portal trust hooks + unified error mapping | Wraps `@x402/hono` |
-| `/client` | **this PR** | `paidFetch` with portal scheme defaults | Wraps `@x402/fetch` |
-| `/erc8004` | planned | ERC-8004 Identity + Reputation Registry client (portal-specific, no upstream) | — |
-| `/ensip25` | planned | ENSIP-25 text key derivation + ERC-7930 encoding (portal-specific) | `@wonderland/interop-addresses` |
+| `/auth` | **LANDED** | Portal SIWX (CAIP-122) + portal-tunnel SIWE wire-compat + `createSiwxAuthHeaders()` factory | Wraps `@x402/extensions/sign-in-with-x` (EOA + EIP-1271 + EIP-6492) |
+| `/hono` | **LANDED** | Hono middleware with pre-wired portal facilitator + portal trust hooks + unified error mapping | Wraps `@x402/hono` |
+| `/client` | **LANDED** | `paidFetch` with portal scheme defaults | Wraps `@x402/fetch` |
+| `/erc8004` | **LANDED** | ERC-8004 Identity + Reputation Registry clients + registration file + IPFS pinner hook (portal-specific) | viem + `@wonderland/interop-addresses` + zod |
+| `/ensip25` | **LANDED** | ENSIP-25 text key derivation + ERC-7930 encoding + bidirectional cross-check (portal-specific) | `@wonderland/interop-addresses` |
 | `/relay` | planned | `verifyPortalHost` (DNSSEC + ENS + ERC-8004 + ENSIP-25 cross-check), `/discovery` parser, `selectBestRelay` by reputation | — |
 | `/cli` (bin) | planned | `relay-register` — one-shot ERC-8004 registration for relay operators | — |
 | top-level | planned | `createPortalClient()` — single factory that combines everything | — |
