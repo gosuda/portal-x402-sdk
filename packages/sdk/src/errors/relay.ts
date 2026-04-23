@@ -28,6 +28,7 @@ export type RelayVerifyReason =
   | 'ens-mismatch'
   | 'erc8004-missing'
   | 'ensip25-mismatch'
+  | 'signature-invalid'
 
 /** Options for {@link RelayVerificationError}. */
 export type RelayVerificationErrorArgs = {

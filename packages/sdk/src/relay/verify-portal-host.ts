@@ -1,27 +1,33 @@
 /**
- * `verifyPortalHost` — the layered trust gate that proves a relay hostname
- * resolves to an on-chain agent identity Portal expects to be there.
+ * `verifyPortalHost` — the layered trust gate that proves a relay
+ * descriptor binds its hostname to an on-chain agent identity Portal
+ * expects to be there.
  *
  * Four layers in the portal trust model:
  *
- *   Layer 1 — TLS.      Runtime concern. When the fetch succeeds over HTTPS,
- *                       the relay's certificate chain has already been verified
- *                       by Node / the browser. portal-tunnel's ENSIP-17 DNSSEC
- *                       pipeline guarantees the hostname ↔ TLS binding is real.
- *                       We do not wrap Node's TLS stack.
- *   Layer 2 — ENS.      The relay's hostname reverse-resolves to the ENS name
- *                       the agent claims. viem's `getEnsName` over the ENS-
- *                       bearing chain (typically mainnet) is the lookup.
- *   Layer 3 — ERC-8004. The claimed ENS name's ERC-8004 agent record exists
- *                       on-chain and the authoritative `agentWallet` matches
- *                       the address in the discovery descriptor.
- *   Layer 4 — ENSIP-25. The ENS name announces the agent id via the ENSIP-25
- *                       text record (agent-registration[...][agentId] = '1').
- *                       Delegated to `crossCheckEnsip25` from /ensip25.
+ *   Layer 1 — TLS.      Runtime concern. When the fetch that populated
+ *                       the descriptor succeeded over HTTPS, the relay's
+ *                       certificate chain has already been verified by
+ *                       Node / the browser. portal-tunnel's ENSIP-17
+ *                       DNSSEC pipeline guarantees the hostname ↔ TLS
+ *                       binding is real. We do not wrap Node's TLS stack.
+ *   Layer 2 — ENS.      The relay's advertised `address` reverse-resolves
+ *                       to an ENS name on the ENS-bearing chain (mainnet).
+ *                       viem's `getEnsName` is the lookup.
+ *   Layer 3 — ERC-8004. The claimed agent id exists in the Identity
+ *                       Registry and its authoritative `agentWallet`
+ *                       matches the descriptor's `address`.
+ *   Layer 4 — ENSIP-25. The ENS name announces the agent id via the
+ *                       ENSIP-25 text record `agent-registration[...][id]`
+ *                       = `'1'`. Delegated to `crossCheckEnsip25`.
  *
  * Layer 1 is implicit (the caller must have fetched over HTTPS). Layers
  * 2-4 are explicit and composable — a failure at any layer throws
  * `RelayVerificationError` with a typed `reason` discriminant.
+ *
+ * A future commit adds **Layer 0** — descriptor signature verification
+ * via `verifyRelayDescriptorSignature`. Once live, Layer 0 runs first so
+ * downstream layers trust the `address` field.
  */
 
 import type { Address, PublicClient } from 'viem'
@@ -29,16 +35,18 @@ import { crossCheckEnsip25 } from '../ensip25/bidirectional'
 import type { Eip155ChainId } from '../ensip25/text-key'
 import type { IdentityRegistryClient } from '../erc8004/identity-registry'
 import { RelayVerificationError } from '../errors/relay'
+import type { RelayDescriptor } from './discovery'
+import { verifyRelayDescriptorSignature } from './verify-signature'
 
 /** Narrow read-side contract — only the ENS lookups we call on the resolver client. */
 export type EnsResolverClient = Pick<PublicClient, 'getEnsName' | 'getEnsText'>
 
 /** Inputs to {@link verifyPortalHost}. */
 export type VerifyPortalHostArgs = {
-  /** Relay hostname under verification (e.g. `'relay-a.example.com'`). */
+  /** Signed descriptor from {@link fetchDiscovery}. Its `address` is the trust anchor. */
+  descriptor: RelayDescriptor
+  /** Relay hostname that was contacted (for error messages + TLS binding context). */
   host: string
-  /** Address the relay advertises as its `ownerAddress` (from the discovery descriptor). */
-  advertisedAddress: Address
   /** Expected ERC-8004 agent id the relay's ENS should announce. */
   expectedAgentId: bigint
   /** CAIP-2 chain id of the ERC-8004 Identity Registry the agent is pinned to. */
@@ -49,6 +57,12 @@ export type VerifyPortalHostArgs = {
   ensClient: EnsResolverClient
   /** ERC-8004 Identity Registry client from `/erc8004`. */
   identityRegistry: IdentityRegistryClient
+  /**
+   * Run Layer 0 (descriptor signature verification) when `descriptor.signature`
+   * is non-empty. Defaults to `true`. Disable only for legacy relays that
+   * still emit unsigned descriptors on a pinned port.
+   */
+  verifyDescriptorSignature?: boolean
 }
 
 /** Result of a passing verification. All fields are cross-checked to agree. */
@@ -60,16 +74,19 @@ export type VerifyPortalHostResult = {
 }
 
 /**
- * Run all three explicit trust layers against a relay host. Throws
- * `RelayVerificationError` on any mismatch; returns the verified record on
- * success. Layer 1 (TLS) is the caller's responsibility — the fetches that
- * populated the discovery descriptor must have been HTTPS.
+ * Run all three explicit trust layers against a signed relay descriptor.
+ * Throws `RelayVerificationError` on any mismatch; returns the verified
+ * record on success. Layer 1 (TLS) is the caller's responsibility — the
+ * fetches that populated the discovery descriptor must have been HTTPS.
  *
  * @example
  * ```ts
+ * const { relays } = await fetchDiscovery({ relayBaseUrl })
+ * const best = selectBestRelay({ relays })
+ * if (best === null) throw new Error('no reachable relays')
  * const verified = await verifyPortalHost({
+ *   descriptor: best,
  *   host: 'relay-a.example.com',
- *   advertisedAddress: '0xabc...',
  *   expectedAgentId: 42n,
  *   chainId: 'eip155:8453',
  *   registryAddress: ERC8004_ADDRESSES['eip155:8453'].identityRegistry,
@@ -81,20 +98,29 @@ export type VerifyPortalHostResult = {
 export async function verifyPortalHost(
   args: VerifyPortalHostArgs,
 ): Promise<VerifyPortalHostResult> {
-  // Layer 2 — ENS reverse: the relay host resolves to an ENS name.
-  const ensName = await reverseResolveEns(args)
+  const advertisedAddress = args.descriptor.address as Address
+  const verifySignature = args.verifyDescriptorSignature ?? true
+
+  // Layer 0 — signed descriptor: only when the descriptor carries a
+  // signature and verification is enabled. We don't require a signature
+  // (bootstrap discovery may be unsigned); we just refuse to trust a
+  // bad one.
+  if (verifySignature && args.descriptor.signature.trim() !== '') {
+    await verifyRelayDescriptorSignature({ descriptor: args.descriptor, host: args.host })
+  }
+
+  // Layer 2 — ENS reverse: the relay's advertised address resolves to an ENS name.
+  const ensName = await reverseResolveEns(args, advertisedAddress)
 
   // Layer 3 — ERC-8004 agent record exists + its authoritative wallet matches
-  // the relay's advertised owner address. This is the on-chain anchor.
+  // the descriptor's address. This is the on-chain anchor.
   const agent = await fetchAgentOrThrow(args)
-  const normalizedAdvertised = args.advertisedAddress.toLowerCase()
-  const normalizedOnChain = agent.agentWallet.toLowerCase()
-  if (normalizedAdvertised !== normalizedOnChain) {
+  if (advertisedAddress.toLowerCase() !== agent.agentWallet.toLowerCase()) {
     throw new RelayVerificationError({
       host: args.host,
       reason: 'erc8004-missing',
       metaMessages: [
-        `advertised ownerAddress ${args.advertisedAddress} does not match ERC-8004 agentWallet ${agent.agentWallet}`,
+        `descriptor address ${advertisedAddress} does not match ERC-8004 agentWallet ${agent.agentWallet}`,
       ],
     })
   }
@@ -117,14 +143,17 @@ export async function verifyPortalHost(
   }
 }
 
-async function reverseResolveEns(args: VerifyPortalHostArgs): Promise<string> {
+async function reverseResolveEns(
+  args: VerifyPortalHostArgs,
+  advertisedAddress: Address,
+): Promise<string> {
   let ensName: string | null
   try {
-    // `getEnsName` expects an address, not a hostname — but the portal
-    // trust model binds the relay's advertised owner address to its ENS name.
-    // Resolving *from* the address ensures the reverse record is authoritative
-    // (the owner controls reverse resolution for their own address).
-    ensName = await args.ensClient.getEnsName({ address: args.advertisedAddress })
+    // `getEnsName` expects an address — the portal trust model binds the
+    // relay's advertised address (the descriptor signer) to its ENS name.
+    // Resolving *from* the address ensures the reverse record is
+    // authoritative (the address owner controls reverse resolution).
+    ensName = await args.ensClient.getEnsName({ address: advertisedAddress })
   } catch (err) {
     throw new RelayVerificationError({
       host: args.host,
@@ -136,7 +165,7 @@ async function reverseResolveEns(args: VerifyPortalHostArgs): Promise<string> {
     throw new RelayVerificationError({
       host: args.host,
       reason: 'ens-mismatch',
-      metaMessages: [`no reverse ENS record for ${args.advertisedAddress}`],
+      metaMessages: [`no reverse ENS record for ${advertisedAddress}`],
     })
   }
   return ensName

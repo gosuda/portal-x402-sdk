@@ -1,18 +1,18 @@
 /**
  * Reputation-weighted relay selection from a `/discovery` response.
  *
- * The Go side publishes two operational metrics per relay — `load` (active
- * connection count) and `loadScore` (TCP bytes-per-second) — plus a `discovery`
- * visibility flag and `expiresAt` TTL. This function filters by reachability
- * (publicly discoverable + not expired + not in the caller's ban list), then
- * ranks the survivors by composite score (lower `load` first, then lower
- * `loadScore` as a tiebreaker). A plug-in `scoreRelay` hook lets consumers
- * override the ranking when they care about a different trait (e.g.
- * ERC-8004 reputation score, geographic proximity).
+ * portal-tunnel v2.1.7 publishes two advisory load metrics per relay —
+ * `activeConnections` (lower = less busy) and `tcpBps` (higher = more TCP
+ * throughput headroom). The Go-side policy engine uses a deterministic
+ * MOLS-GF(64) algorithm to pick a relay; these metrics are informational.
+ * We keep the TS selector deliberately simple: filter by expiry + ban
+ * list, rank by active-connection count with tcpBps as the tiebreaker,
+ * and expose a `scoreRelay` hook so consumers plug in ERC-8004
+ * reputation, geolocation, or their own signal when needed.
  *
- * Selection is fully synchronous and stateless — the ban list is
- * caller-owned. Pair with a consumer-side `Set<string>` to track MITM
- * detections / consecutive failures across calls.
+ * Selection is fully synchronous and stateless — the ban list is caller-
+ * owned. Pair with a consumer-side `Set<string>` to track MITM detections
+ * or consecutive failures across calls.
  */
 
 import type { RelayDescriptor } from './discovery'
@@ -25,23 +25,18 @@ export type SelectBestRelayArgs = {
   bannedAddresses?: ReadonlySet<string>
   /**
    * Optional scoring hook. Returns a number — **lower is better**. When
-   * omitted, the default composite of `load` then `loadScore` is used.
-   * Consumers plug this to weight by ERC-8004 reputation, geolocation, etc.
+   * omitted, the default composite of `activeConnections` then `-tcpBps`
+   * is used.
    */
   scoreRelay?: (relay: RelayDescriptor) => number
   /** Reference time for TTL checks. Defaults to `new Date()`. */
   now?: Date
-  /**
-   * Require `discovery === true`. Default `true`. Disable only when the caller
-   * already narrowed the candidate set (e.g. a static bootstrap list).
-   */
-  requireDiscoveryFlag?: boolean
 }
 
 /**
  * Pick the best relay from the candidate set. Returns `null` when every
- * candidate is filtered out — the caller distinguishes "no matches" from
- * "picked X" by inspecting the result, not via throws.
+ * candidate is filtered out — the caller distinguishes "no matches"
+ * from "picked X" by inspecting the result, not via throws.
  *
  * @example
  * ```ts
@@ -55,12 +50,10 @@ export type SelectBestRelayArgs = {
  */
 export function selectBestRelay(args: SelectBestRelayArgs): RelayDescriptor | null {
   const now = args.now ?? new Date()
-  const requireDiscoveryFlag = args.requireDiscoveryFlag ?? true
   const banned = args.bannedAddresses
   const scoreRelay = args.scoreRelay ?? defaultScore
 
   const candidates = args.relays.filter((relay) => {
-    if (requireDiscoveryFlag && !relay.discovery) return false
     if (relay.expiresAt.getTime() <= now.getTime()) return false
     if (banned?.has(relay.address)) return false
     return true
@@ -68,8 +61,9 @@ export function selectBestRelay(args: SelectBestRelayArgs): RelayDescriptor | nu
 
   if (candidates.length === 0) return null
 
-  // Stable sort: the input order is the tiebreaker for equal scores, so
-  // repeated calls on an unchanging discovery response pick the same relay.
+  // Stable sort: input order is the final tiebreaker for equal scores,
+  // so repeated calls on an unchanging discovery response pick the same
+  // relay.
   const scored = candidates.map((relay, index) => ({
     relay,
     score: scoreRelay(relay),
@@ -84,11 +78,11 @@ export function selectBestRelay(args: SelectBestRelayArgs): RelayDescriptor | nu
 }
 
 /**
- * Default ranking: `load` first (fewer active connections is better), then
- * `loadScore` (more TCP headroom is better). Composite into a single scalar
- * via `load * 1_000_000 + loadScore` so `load` dominates; ties on `load`
- * fall through to `loadScore`.
+ * Default ranking: `activeConnections` first (fewer is better), then
+ * `-tcpBps` so higher throughput wins the tie. Composite into a single
+ * scalar via `activeConnections * 1e9 - tcpBps` so the connection count
+ * dominates unless tied.
  */
 function defaultScore(relay: RelayDescriptor): number {
-  return relay.load * 1_000_000 + relay.loadScore
+  return relay.activeConnections * 1e9 - relay.tcpBps
 }

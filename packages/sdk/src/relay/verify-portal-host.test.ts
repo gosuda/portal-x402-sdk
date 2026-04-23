@@ -2,12 +2,35 @@ import type { Address } from 'viem'
 import { describe, expect, it, vi } from 'vitest'
 import type { AgentRecord, IdentityRegistryClient } from '../erc8004/identity-registry'
 import { RelayVerificationError } from '../errors'
+import type { RelayDescriptor } from './discovery'
 import { type EnsResolverClient, verifyPortalHost } from './verify-portal-host'
 
 const REGISTRY_ADDR: Address = '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432'
 const AGENT_WALLET: Address = '0x000000000000000000000000000000000000bEEF'
-const ADVERTISED: Address = AGENT_WALLET
 const DIFFERENT_ADDR: Address = '0x0000000000000000000000000000000000000DeaD'
+
+function makeDescriptor(overrides: Partial<RelayDescriptor> = {}): RelayDescriptor {
+  const issued = new Date('2026-04-19T10:00:00Z')
+  const expires = new Date('2026-04-19T11:00:00Z')
+  return {
+    address: AGENT_WALLET,
+    version: 'v2.1.7',
+    issuedAt: issued,
+    issuedAtNano: BigInt(issued.getTime()) * 1_000_000n,
+    expiresAt: expires,
+    expiresAtNano: BigInt(expires.getTime()) * 1_000_000n,
+    apiHttpsAddr: 'https://relay-a.example.com',
+    wireGuardPublicKey: '',
+    wireGuardPort: 0,
+    supportsOverlay: false,
+    supportsUdp: false,
+    supportsTcp: true,
+    activeConnections: 0,
+    tcpBps: 0,
+    signature: '',
+    ...overrides,
+  }
+}
 
 function makeEnsClient(
   overrides: Partial<{
@@ -38,8 +61,8 @@ function makeIdentityRegistry(agent: AgentRecord): IdentityRegistryClient {
 }
 
 const BASE_ARGS = {
+  descriptor: makeDescriptor(),
   host: 'relay-a.example.com',
-  advertisedAddress: ADVERTISED,
   expectedAgentId: 42n,
   chainId: 'eip155:8453',
   registryAddress: REGISTRY_ADDR,
@@ -154,12 +177,12 @@ describe('verifyPortalHost — Layer 3 (ERC-8004)', () => {
     }
   })
 
-  it('throws erc8004-missing when advertised address does not match agentWallet', async () => {
+  it('throws erc8004-missing when the descriptor address does not match agentWallet', async () => {
     const ens = makeEnsClient()
     const registry = makeIdentityRegistry({
       agentId: 42n,
       agentURI: 'ipfs://x',
-      agentWallet: DIFFERENT_ADDR, // mismatch
+      agentWallet: DIFFERENT_ADDR,
       owner: DIFFERENT_ADDR,
     })
     try {
