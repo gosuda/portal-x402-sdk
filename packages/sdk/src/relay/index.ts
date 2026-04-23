@@ -7,3 +7,9 @@ export {
   type RelayIdentity,
 } from './discovery'
 export { type SelectBestRelayArgs, selectBestRelay } from './select-best-relay'
+export {
+  type EnsResolverClient,
+  type VerifyPortalHostArgs,
+  type VerifyPortalHostResult,
+  verifyPortalHost,
+} from './verify-portal-host'
