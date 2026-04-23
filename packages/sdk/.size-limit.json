@@ -48,12 +48,14 @@
   {
     "name": "erc8004",
     "path": "dist/erc8004/index.mjs",
-    "limit": "40 KB"
+    "limit": "40 KB",
+    "ignore": ["@wonderland/interop-addresses", "viem", "zod"]
   },
   {
     "name": "ensip25",
     "path": "dist/ensip25/index.mjs",
-    "limit": "15 KB"
+    "limit": "15 KB",
+    "ignore": ["@wonderland/interop-addresses", "viem"]
   },
   {
     "name": "errors",
