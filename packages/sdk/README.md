@@ -2,7 +2,7 @@
 
 > TypeScript glue between the **x402 payment protocol** and **`gosuda/portal-tunnel`** relay network. Thin wrappers over `@x402/*` upstream, portal-specific trust layer on top.
 
-**Status**: pre-release (0.1.0 in development)
+**Status**: pre-release (`0.1.0-rc.0` on the `next` tag — `npm i @portal-tunnel/x402-sdk@next`)
 
 ---
 
@@ -28,7 +28,7 @@ Two external systems, one integration point:
 | `/client` | **LANDED** | `paidFetch` with portal scheme defaults | Wraps `@x402/fetch` |
 | `/erc8004` | **LANDED** | ERC-8004 Identity + Reputation Registry clients + registration file + IPFS pinner hook (portal-specific) | viem + `@wonderland/interop-addresses` + zod |
 | `/ensip25` | **LANDED** | ENSIP-25 text key derivation + ERC-7930 encoding + bidirectional cross-check (portal-specific) | `@wonderland/interop-addresses` |
-| `/relay` | **LANDED** | `fetchDiscovery` (`GET /discovery` parser, DiscoveryVersion=6 pinned), `selectBestRelay` (filter + score by Load/LoadScore), `verifyPortalHost` (ENS + ERC-8004 + ENSIP-25 layered trust) | viem ENS + `/erc8004` + `/ensip25` |
+| `/relay` | **LANDED** | `fetchDiscovery` (`GET /discovery` parser, `DiscoveryVersion='7'` + `SDKVersion='6'` pinned to portal-tunnel v2.1.7), `verifyRelayDescriptorSignature` (Layer 0 secp256k1 recoverable), `selectBestRelay` (filter + score by `activeConnections`/`tcpBps`), `verifyPortalHost` (5-layer trust: signature + ENS + ERC-8004 + pluggable `TrustAnchor[]`) | viem + `/erc8004` + `/ensip25` |
 | `/cli` (bin) | **LANDED** | `relay-register` — one-shot ERC-8004 agent registration with env-only private key | viem + cac |
 | top-level | **LANDED** | `createPortalClient()` — unified factory. `{ facilitator, paidFetch, createHonoMiddleware }` by default; `{ identityRegistry, reputationRegistry, fetchDiscovery, selectBestRelay, verifyPortalHost }` under `identity` when `identity: { chainId, publicClient }` is supplied | composes every subpath |
 
@@ -39,16 +39,21 @@ Every subpath is `sideEffects: false`, dual ESM + CJS, with `.d.ts` + `.d.cts`. 
 ## Install
 
 ```bash
-pnpm add @portal-tunnel/x402-sdk @x402/core @x402/evm @x402/hono @x402/fetch @x402/extensions viem hono
+# Minimum
+pnpm add @portal-tunnel/x402-sdk
+
+# If you use the /hono subpath, install hono as a peer
+pnpm add hono
 ```
 
-Node 20+ required. TypeScript 5.5+ recommended (optional peer).
+`@x402/*` and `viem` are runtime dependencies and arrive transitively — you do not list them in your own `package.json`. Node 20+ required. TypeScript 5.5+ recommended (optional peer).
 
 ---
 
 ## Quickstart — Hono paywall with portal defaults
 
 ```ts
+import { ExactEvmScheme } from '@x402/evm'
 import { Hono } from 'hono'
 import { createPortalFacilitator } from '@portal-tunnel/x402-sdk/facilitator'
 import { createPortalHonoMiddleware } from '@portal-tunnel/x402-sdk/hono'
@@ -70,6 +75,10 @@ app.use(
         price: '0.01 USD',
         payTo: '0xYourTreasury',
       },
+    ],
+    schemes: [
+      // Bring your own scheme set (consumer chooses which chains to support).
+      { network: 'eip155:8453', server: ExactEvmScheme.server },
     ],
     facilitator,
   }),
@@ -129,16 +138,36 @@ Every facilitator request is now auto-signed with a fresh SIWX challenge. The au
 ```ts
 import { createPortalTunnelLeaseFlow } from '@portal-tunnel/x402-sdk/auth'
 
-const lease = createPortalTunnelLeaseFlow({
-  relayHost: 'relay.example',
+const flow = createPortalTunnelLeaseFlow({
+  relayBaseUrl: 'https://relay.example.com',
 })
 
-const { message, challengeId } = await lease.fetchChallenge({})
-const signature = await lease.signChallenge({ walletClient, address, message })
-const { accessToken } = await lease.register({ challengeId, signature, address })
+// 1. Ask the relay for a SIWE challenge.
+const challenge = await flow.fetchChallenge({
+  identity: { address: walletAddress },
+  metadata: { description: 'demo relay' },
+  ttl: 3600,
+})
+
+// 2. Sign the SIWE message with your viem WalletClient.
+const siweSignature = await walletClient.signMessage({
+  account: walletAddress,
+  message: challenge.siweMessage,
+})
+
+// 3. Register the lease and receive the JWT.
+const lease = await flow.register({
+  challengeId: challenge.challengeId,
+  siweMessage: challenge.siweMessage,
+  siweSignature,
+})
+
+console.log(lease.accessToken)   // ES256K JWT — portal-tunnel `Authorization: Bearer ...`
 ```
 
 Produces a SIWE message **byte-equal to portal-tunnel's `spruceid/siwe-go` expectation** (statement `"Register a portal lease"`, `chainId: 1`, 2-minute expiry). A TypeScript consumer can register a portal-tunnel lease without ever touching Go.
+
+Errors during this flow surface as `PortalAuthError` with `reason: 'rate-limited' | 'request-failed'`. On 429 you get `err.retryAfterMs` parsed from the relay's `Retry-After` header — handle backoff explicitly without parsing wire details yourself.
 
 ---
 
