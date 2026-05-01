@@ -1,6 +1,6 @@
 {
   "name": "@gosuda/portal-x402-sdk",
-  "version": "0.0.0",
+  "version": "0.1.0-rc.0",
   "description": "TypeScript SDK that wraps x402 payment + ERC-8004 identity + ENSIP-25 verification for portal-tunnel relay networks.",
   "license": "MIT",
   "homepage": "https://github.com/gosuda/portal-x402-sdk",
@@ -24,6 +24,10 @@
   ],
   "type": "module",
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
