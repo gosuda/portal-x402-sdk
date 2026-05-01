@@ -1,5 +1,5 @@
 ---
-'@gosuda/portal-x402-sdk': minor
+'@portal-tunnel/x402-sdk': minor
 ---
 
 Sync `/relay` to portal-tunnel v2.1.7 wire format. **Breaking**:

@@ -123,7 +123,7 @@ export type PortalClient = PortalPaymentHandles & {
  *
  * @example
  * ```ts
- * import { createPortalClient } from '@gosuda/portal-x402-sdk'
+ * import { createPortalClient } from '@portal-tunnel/x402-sdk'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { createPublicClient, http } from 'viem'
  * import { base, mainnet } from 'viem/chains'

@@ -2,7 +2,7 @@
   "mode": "pre",
   "tag": "rc",
   "initialVersions": {
-    "@gosuda/portal-x402-sdk": "0.0.0"
+    "@portal-tunnel/x402-sdk": "0.0.0"
   },
   "changesets": [
     "auth-rate-limit-mapping",
