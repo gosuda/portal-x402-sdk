@@ -4,6 +4,12 @@ export type {
   EVMSigner,
   SIWxPayload,
 } from '@x402/extensions/sign-in-with-x'
+// Re-export the typed error thrown by `createPortalTunnelLeaseFlow` for ergonomic narrowing.
+export {
+  PortalAuthError,
+  type PortalAuthErrorArgs,
+  type PortalAuthReason,
+} from '../errors/auth'
 export {
   type CreateSiwxAuthHeadersConfig,
   createSiwxAuthHeaders,

@@ -1,5 +1,6 @@
 import { type Address, getAddress, type Hex } from 'viem'
 import { z } from 'zod'
+import { PortalAuthError, parseRetryAfterMs } from '../errors/auth'
 
 /**
  * Byte-equal constants with `gosuda/portal-tunnel` — `portal/auth/auth.go:149-161`.
@@ -149,6 +150,24 @@ const LeaseResponseSchema = z.object({
   tcp_enabled: z.boolean().optional(),
 })
 
+function toPortalAuthError(response: Response, url: string): PortalAuthError {
+  if (response.status === 429) {
+    const retryAfterMs = parseRetryAfterMs(response.headers.get('retry-after'))
+    return new PortalAuthError({
+      url,
+      status: 429,
+      reason: 'rate-limited',
+      ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
+    })
+  }
+  return new PortalAuthError({
+    url,
+    status: response.status,
+    reason: 'request-failed',
+    metaMessages: response.statusText !== '' ? [response.statusText] : undefined,
+  })
+}
+
 /** Create a portal-tunnel lease registration flow client. */
 export function createPortalTunnelLeaseFlow(
   config: PortalTunnelLeaseConfig,
@@ -174,7 +193,7 @@ export function createPortalTunnelLeaseFlow(
         body: JSON.stringify(body),
       })
       if (!response.ok) {
-        throw new Error(`portal-tunnel challenge failed: ${response.status} ${response.statusText}`)
+        throw toPortalAuthError(response, challengeUrl)
       }
       const parsed = ChallengeResponseSchema.parse(await response.json())
       return {
@@ -198,7 +217,7 @@ export function createPortalTunnelLeaseFlow(
         body: JSON.stringify(body),
       })
       if (!response.ok) {
-        throw new Error(`portal-tunnel register failed: ${response.status} ${response.statusText}`)
+        throw toPortalAuthError(response, registerUrl)
       }
       const parsed = LeaseResponseSchema.parse(await response.json())
       const lease: PortalTunnelLease = {

@@ -1,6 +1,7 @@
 import { HttpResponse, http } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { PortalAuthError } from '../errors/auth'
 import {
   buildPortalTunnelChallengeMessage,
   createPortalTunnelLeaseFlow,
@@ -131,10 +132,13 @@ describe('createPortalTunnelLeaseFlow — fetchChallenge', () => {
     })
   })
 
-  it('throws on non-2xx responses', async () => {
+  it('maps HTTP 429 to PortalAuthError(reason: rate-limited) with retryAfterMs', async () => {
     server.use(
       http.post(`${RELAY_BASE_URL}/sdk/register/challenge`, () =>
-        HttpResponse.json({ error: 'rate limited' }, { status: 429 }),
+        HttpResponse.json(
+          { error: 'rate limited' },
+          { status: 429, headers: { 'retry-after': '30' } },
+        ),
       ),
     )
     const flow = createPortalTunnelLeaseFlow({ relayBaseUrl: RELAY_BASE_URL })
@@ -142,7 +146,33 @@ describe('createPortalTunnelLeaseFlow — fetchChallenge', () => {
       flow.fetchChallenge({
         identity: { address: '0x14791697260E4c9A71f18484C9f997B308e59325' },
       }),
-    ).rejects.toThrow(/portal-tunnel challenge failed: 429/)
+    ).rejects.toMatchObject({
+      name: 'PortalAuthError',
+      reason: 'rate-limited',
+      status: 429,
+      retryAfterMs: 30_000,
+      url: `${RELAY_BASE_URL}/sdk/register/challenge`,
+    })
+  })
+
+  it('omits retryAfterMs when 429 has no Retry-After header', async () => {
+    server.use(
+      http.post(`${RELAY_BASE_URL}/sdk/register/challenge`, () =>
+        HttpResponse.json({ error: 'rate limited' }, { status: 429 }),
+      ),
+    )
+    const flow = createPortalTunnelLeaseFlow({ relayBaseUrl: RELAY_BASE_URL })
+    let caught: unknown
+    try {
+      await flow.fetchChallenge({
+        identity: { address: '0x14791697260E4c9A71f18484C9f997B308e59325' },
+      })
+    } catch (err) {
+      caught = err
+    }
+    expect(caught).toBeInstanceOf(PortalAuthError)
+    expect((caught as PortalAuthError).reason).toBe('rate-limited')
+    expect((caught as PortalAuthError).retryAfterMs).toBeUndefined()
   })
 })
 
@@ -219,7 +249,7 @@ describe('createPortalTunnelLeaseFlow — register', () => {
     })
   })
 
-  it('throws on non-2xx responses', async () => {
+  it('maps non-2xx (e.g. 401) to PortalAuthError(reason: request-failed)', async () => {
     server.use(
       http.post(`${RELAY_BASE_URL}/sdk/register`, () =>
         HttpResponse.json({ error: 'invalid signature' }, { status: 401 }),
@@ -232,7 +262,12 @@ describe('createPortalTunnelLeaseFlow — register', () => {
         siweMessage: 'msg',
         siweSignature: '0xabcd',
       }),
-    ).rejects.toThrow(/portal-tunnel register failed: 401/)
+    ).rejects.toMatchObject({
+      name: 'PortalAuthError',
+      reason: 'request-failed',
+      status: 401,
+      url: `${RELAY_BASE_URL}/sdk/register`,
+    })
   })
 })
 

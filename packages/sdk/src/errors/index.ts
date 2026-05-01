@@ -1,3 +1,9 @@
+export {
+  PortalAuthError,
+  type PortalAuthErrorArgs,
+  type PortalAuthReason,
+  parseRetryAfterMs,
+} from './auth'
 export { BaseError, type BaseErrorParameters, type BaseErrorType } from './base'
 export {
   IdentityLookupError,
@@ -31,4 +37,5 @@ export type PortalErrorName =
   | 'RelayDiscoveryError'
   | 'RelayVerificationError'
   | 'IdentityLookupError'
+  | 'PortalAuthError'
   | 'RegistrationError'
