@@ -1,5 +1,5 @@
 ---
-'@gosuda/portal-x402-sdk': minor
+'@portal-tunnel/x402-sdk': minor
 ---
 
 Extract Layer 4 of `verifyPortalHost` into a pluggable `TrustAnchor`

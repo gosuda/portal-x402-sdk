@@ -72,7 +72,7 @@ function cli() {
     })
 
   program.help()
-  program.version('0.0.0')
+  program.version('0.1.0-rc.0')
   program.parse(process.argv, { run: false })
   return program
 }

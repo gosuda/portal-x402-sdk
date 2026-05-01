@@ -1,4 +1,4 @@
-# @gosuda/portal-x402-sdk
+# @portal-tunnel/x402-sdk
 
 > TypeScript glue between the **x402 payment protocol** and **`gosuda/portal-tunnel`** relay network. Thin wrappers over `@x402/*` upstream, portal-specific trust layer on top.
 
@@ -39,7 +39,7 @@ Every subpath is `sideEffects: false`, dual ESM + CJS, with `.d.ts` + `.d.cts`. 
 ## Install
 
 ```bash
-pnpm add @gosuda/portal-x402-sdk @x402/core @x402/evm @x402/hono @x402/fetch @x402/extensions viem hono
+pnpm add @portal-tunnel/x402-sdk @x402/core @x402/evm @x402/hono @x402/fetch @x402/extensions viem hono
 ```
 
 Node 20+ required. TypeScript 5.5+ recommended (optional peer).
@@ -50,8 +50,8 @@ Node 20+ required. TypeScript 5.5+ recommended (optional peer).
 
 ```ts
 import { Hono } from 'hono'
-import { createPortalFacilitator } from '@gosuda/portal-x402-sdk/facilitator'
-import { createPortalHonoMiddleware } from '@gosuda/portal-x402-sdk/hono'
+import { createPortalFacilitator } from '@portal-tunnel/x402-sdk/facilitator'
+import { createPortalHonoMiddleware } from '@portal-tunnel/x402-sdk/hono'
 
 const facilitator = createPortalFacilitator({
   // defaults to the public x402 reference facilitator
@@ -88,7 +88,7 @@ What's happening under the hood:
 ## Quickstart — paid fetch on the client
 
 ```ts
-import { createPortalPaidFetch } from '@gosuda/portal-x402-sdk/client'
+import { createPortalPaidFetch } from '@portal-tunnel/x402-sdk/client'
 
 const paidFetch = createPortalPaidFetch()                   // ExactEvmScheme on eip155:* by default
 const response = await paidFetch('https://api.example.com/premium')
@@ -102,8 +102,8 @@ Wraps `@x402/fetch wrapFetchWithPaymentFromConfig` with portal-friendly scheme d
 ## Quickstart — SIWX authentication header for the facilitator
 
 ```ts
-import { createPortalFacilitator } from '@gosuda/portal-x402-sdk/facilitator'
-import { createPortalSiwx, createSiwxAuthHeaders } from '@gosuda/portal-x402-sdk/auth'
+import { createPortalFacilitator } from '@portal-tunnel/x402-sdk/facilitator'
+import { createPortalSiwx, createSiwxAuthHeaders } from '@portal-tunnel/x402-sdk/auth'
 
 const siwx = createPortalSiwx({
   domain: 'app.example',
@@ -127,7 +127,7 @@ Every facilitator request is now auto-signed with a fresh SIWX challenge. The au
 ## Quickstart — portal-tunnel lease registration
 
 ```ts
-import { createPortalTunnelLeaseFlow } from '@gosuda/portal-x402-sdk/auth'
+import { createPortalTunnelLeaseFlow } from '@portal-tunnel/x402-sdk/auth'
 
 const lease = createPortalTunnelLeaseFlow({
   relayHost: 'relay.example',

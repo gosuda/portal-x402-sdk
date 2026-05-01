@@ -1,5 +1,5 @@
 ---
-'@gosuda/portal-x402-sdk': minor
+'@portal-tunnel/x402-sdk': minor
 ---
 
 Add portal-identity primitives:

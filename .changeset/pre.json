@@ -1,0 +1,17 @@
+{
+  "mode": "pre",
+  "tag": "rc",
+  "initialVersions": {
+    "@portal-tunnel/x402-sdk": "0.0.0"
+  },
+  "changesets": [
+    "auth-rate-limit-mapping",
+    "errors-base",
+    "facilitator-client",
+    "portal-identity-primitives",
+    "portal-relay-and-factory",
+    "portal-tunnel-v2.1.7-sync",
+    "thin-wrapper-foundation",
+    "trust-anchor-pluggable"
+  ]
+}

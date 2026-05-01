@@ -53,7 +53,7 @@ export type CreatePortalPaidFetchConfig = {
  * @example
  * ```ts
  * import { privateKeyToAccount } from 'viem/accounts'
- * import { createPortalPaidFetch } from '@gosuda/portal-x402-sdk/client'
+ * import { createPortalPaidFetch } from '@portal-tunnel/x402-sdk/client'
  *
  * const signer = privateKeyToAccount('0x...')
  * const paidFetch = createPortalPaidFetch({ signer })

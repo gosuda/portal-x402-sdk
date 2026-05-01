@@ -8,7 +8,7 @@
 
 | Package | Description |
 |---|---|
-| [`@gosuda/portal-x402-sdk`](./packages/sdk) | Hono middleware, paid fetch, relay selection, ERC-8004 identity, ENSIP-25 verification |
+| [`@portal-tunnel/x402-sdk`](./packages/sdk) | Hono middleware, paid fetch, relay selection, ERC-8004 identity, ENSIP-25 verification |
 
 ## Development
 

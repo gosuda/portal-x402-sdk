@@ -1,5 +1,5 @@
 ---
-'@gosuda/portal-x402-sdk': minor
+'@portal-tunnel/x402-sdk': minor
 ---
 
 Add three thin-wrapper subpaths over the 2026-04-13 upstream release of `@x402/*`:

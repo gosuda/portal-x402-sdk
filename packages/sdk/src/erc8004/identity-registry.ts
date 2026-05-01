@@ -117,7 +117,7 @@ export type CreateIdentityRegistryClientConfig = {
  * ```ts
  * import { createPublicClient, http } from 'viem'
  * import { base } from 'viem/chains'
- * import { createIdentityRegistryClient } from '@gosuda/portal-x402-sdk/erc8004'
+ * import { createIdentityRegistryClient } from '@portal-tunnel/x402-sdk/erc8004'
  *
  * const publicClient = createPublicClient({ chain: base, transport: http() })
  * const registry = createIdentityRegistryClient({ chainId: 'eip155:8453', publicClient })
