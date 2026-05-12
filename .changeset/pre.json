@@ -6,6 +6,7 @@
   },
   "changesets": [
     "auth-rate-limit-mapping",
+    "cli-fix-and-real-chain-tests",
     "errors-base",
     "facilitator-client",
     "portal-identity-primitives",
