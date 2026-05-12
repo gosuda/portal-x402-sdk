@@ -2,7 +2,7 @@
 
 > TypeScript glue between the **x402 payment protocol** and **`gosuda/portal-tunnel`** relay network. Thin wrappers over `@x402/*` upstream, portal-specific trust layer on top.
 
-**Status**: pre-release (`0.1.0-rc.0` on the `next` tag — `npm i @portal-tunnel/x402-sdk@next`)
+**Status**: pre-release (`0.1.0-rc.1` on the `next` tag — `npm i @portal-tunnel/x402-sdk@next`)
 
 ---
 
