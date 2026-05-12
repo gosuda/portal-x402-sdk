@@ -16,6 +16,8 @@
  * start if the named env var is empty.
  */
 
+import { realpathSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { cac } from 'cac'
 import { createPublicClient, createWalletClient, type Hex, http, isHex } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
@@ -138,9 +140,29 @@ function usageError(message: string): Error {
   return new RegistrationError({ step: 'registry', cause: new Error(message) })
 }
 
+/**
+ * Decide whether this module was launched as the program entry point — i.e.
+ * via the npm `bin` script (`relay-register`) or `node dist/cli/relay-register.mjs`,
+ * not via `import { cli } from '.../cli/relay-register.mjs'` inside another
+ * program. We compare the realpath of `process.argv[1]` against the realpath
+ * of this file. Symlink resolution is required because the npm bin shim
+ * (`node_modules/.bin/relay-register`) is a symlink to the underlying `.mjs`,
+ * so `argv[1]` and `import.meta.url` resolve to different filesystem paths
+ * without an explicit `realpath` call.
+ */
+export function isCliEntrypoint(): boolean {
+  const argv1 = process.argv[1]
+  if (argv1 === undefined || argv1 === '') return false
+  try {
+    return realpathSync(argv1) === realpathSync(fileURLToPath(import.meta.url))
+  } catch {
+    return false
+  }
+}
+
 // Entrypoint. Lazy so this module remains importable for tests without
 // running argv parsing.
-if (process.argv[1]?.endsWith('relay-register.mjs')) {
+if (isCliEntrypoint()) {
   cli()
 }
 
