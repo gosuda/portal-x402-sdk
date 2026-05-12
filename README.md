@@ -2,7 +2,7 @@
 
 > TypeScript SDK that wraps x402 payment + ERC-8004 identity + ENSIP-25 verification for portal-tunnel relay networks.
 
-**Status**: pre-release — `@portal-tunnel/x402-sdk@0.1.0-rc.0` on the `next` tag.
+**Status**: pre-release — `@portal-tunnel/x402-sdk@0.1.0-rc.1` on the `next` tag.
 
 ```bash
 npm i @portal-tunnel/x402-sdk@next
