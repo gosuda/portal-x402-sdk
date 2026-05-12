@@ -67,6 +67,6 @@
     "name": "cli/relay-register",
     "path": "dist/cli/relay-register.mjs",
     "limit": "80 KB",
-    "ignore": ["@wonderland/interop-addresses", "cac", "viem", "zod"]
+    "ignore": ["@wonderland/interop-addresses", "cac", "fs", "url", "viem", "zod"]
   }
 ]
