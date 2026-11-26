@@ -70,19 +70,24 @@ describe('isCliEntrypoint', () => {
 
 describe('CLI bin smoke', () => {
   const builtBin = resolve(__dirname, '../../dist/cli/relay-register.mjs')
-  const binDirectory = mkdtempSync(join(tmpdir(), 'portal-cli-'))
-  const installedBin = join(binDirectory, 'relay-register')
+  let binDirectory: string | undefined
+  let installedBin: string
 
   beforeAll(() => {
     expect(existsSync(builtBin), 'Build the SDK before running CLI smoke tests').toBe(true)
+    binDirectory = mkdtempSync(join(tmpdir(), 'portal-cli-'))
+    installedBin = join(binDirectory, 'relay-register')
     symlinkSync(builtBin, installedBin)
   })
 
   afterAll(() => {
-    rmSync(binDirectory, { recursive: true, force: true })
+    if (binDirectory !== undefined) {
+      rmSync(binDirectory, { recursive: true, force: true })
+    }
   })
 
-  it.each([builtBin, installedBin])('prints --help text through %s', async (entry) => {
+  it.each(['built', 'installed'] as const)('prints --help text through %s', async (kind) => {
+    const entry = kind === 'built' ? builtBin : installedBin
     const { stdout } = await execFileAsync(process.execPath, [entry, '--help'])
     expect(stdout).toContain('Usage:')
     expect(stdout).toContain('relay-register')
@@ -91,7 +96,8 @@ describe('CLI bin smoke', () => {
     expect(stdout).toContain('--agent-uri')
   }, 20_000)
 
-  it.each([builtBin, installedBin])('prints the version number through %s', async (entry) => {
+  it.each(['built', 'installed'] as const)('prints the version number through %s', async (kind) => {
+    const entry = kind === 'built' ? builtBin : installedBin
     const { stdout } = await execFileAsync(process.execPath, [entry, '--version'])
     // Matches `relay-register/<semver>` (e.g. `relay-register/0.1.0-rc.1`).
     expect(stdout).toMatch(/^relay-register\/\d+\.\d+\.\d+/)
