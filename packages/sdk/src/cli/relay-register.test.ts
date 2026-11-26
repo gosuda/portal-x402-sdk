@@ -1,8 +1,9 @@
 import { execFile } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { RegistrationError } from '../errors'
 import { CHAIN_ALIASES, isCliEntrypoint, readPrivateKeyFromEnv } from './relay-register'
 
@@ -69,32 +70,36 @@ describe('isCliEntrypoint', () => {
 
 describe('CLI bin smoke', () => {
   const builtBin = resolve(__dirname, '../../dist/cli/relay-register.mjs')
-  const runIfBuilt = existsSync(builtBin) ? it : it.skip
+  let binDirectory: string | undefined
+  let installedBin: string
 
-  runIfBuilt(
-    'prints --help text when invoked as the program entry (regression: argv[1] symlink case)',
-    async () => {
-      // Mirrors how npm exposes the CLI: `node dist/cli/relay-register.mjs --help`.
-      // Before isCliEntrypoint(), this exited 0 with empty output because the
-      // entrypoint check used `endsWith('relay-register.mjs')` which fails on
-      // the npm bin symlink path (`node_modules/.bin/relay-register`).
-      const { stdout } = await execFileAsync(process.execPath, [builtBin, '--help'])
-      expect(stdout).toContain('Usage:')
-      expect(stdout).toContain('relay-register')
-      expect(stdout).toContain('--chain')
-      expect(stdout).toContain('--private-key-env')
-      expect(stdout).toContain('--agent-uri')
-    },
-    20_000,
-  )
+  beforeAll(() => {
+    expect(existsSync(builtBin), 'Build the SDK before running CLI smoke tests').toBe(true)
+    binDirectory = mkdtempSync(join(tmpdir(), 'portal-cli-'))
+    installedBin = join(binDirectory, 'relay-register')
+    symlinkSync(builtBin, installedBin)
+  })
 
-  runIfBuilt(
-    'prints the version number when invoked with --version',
-    async () => {
-      const { stdout } = await execFileAsync(process.execPath, [builtBin, '--version'])
-      // Matches `relay-register/<semver>` (e.g. `relay-register/0.1.0-rc.1`).
-      expect(stdout).toMatch(/^relay-register\/\d+\.\d+\.\d+/)
-    },
-    20_000,
-  )
+  afterAll(() => {
+    if (binDirectory !== undefined) {
+      rmSync(binDirectory, { recursive: true, force: true })
+    }
+  })
+
+  it.each(['built', 'installed'] as const)('prints --help text through %s', async (kind) => {
+    const entry = kind === 'built' ? builtBin : installedBin
+    const { stdout } = await execFileAsync(process.execPath, [entry, '--help'])
+    expect(stdout).toContain('Usage:')
+    expect(stdout).toContain('relay-register')
+    expect(stdout).toContain('--chain')
+    expect(stdout).toContain('--private-key-env')
+    expect(stdout).toContain('--agent-uri')
+  }, 20_000)
+
+  it.each(['built', 'installed'] as const)('prints the version number through %s', async (kind) => {
+    const entry = kind === 'built' ? builtBin : installedBin
+    const { stdout } = await execFileAsync(process.execPath, [entry, '--version'])
+    // Matches `relay-register/<semver>` (e.g. `relay-register/0.1.0-rc.1`).
+    expect(stdout).toMatch(/^relay-register\/\d+\.\d+\.\d+/)
+  }, 20_000)
 })
